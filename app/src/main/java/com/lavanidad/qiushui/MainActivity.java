@@ -14,24 +14,45 @@ import com.lavanidad.qiushui.bean.SketchpadData;
 
 public class MainActivity extends AppCompatActivity {
 
-    Button bt1;
+    Button bt_none, bt_rect, bt_add_rect;
     SketchpadView pad;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        bt1 = findViewById(R.id.bt1);
+        bt_none = findViewById(R.id.bt_none);
+        bt_rect = findViewById(R.id.bt_rect);
+        bt_add_rect = findViewById(R.id.bt_add_rect);
         pad = findViewById(R.id.pad);
 
+        //init
         SketchpadData sketchpadData = new SketchpadData();
         pad.setSketchData(sketchpadData);
-        bt1.setOnClickListener(new View.OnClickListener() {
+
+        bt_none.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                bt_add_rect.setVisibility(View.INVISIBLE);
+                pad.setDrawMode(SketchpadView.DrawMode.TYPE_NONE);
+            }
+        });
+
+        bt_rect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                bt_add_rect.setVisibility(View.VISIBLE);
+                //step1
+                pad.setDrawMode(SketchpadView.DrawMode.TYPE_RECT);
+            }
+        });
+
+        bt_add_rect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.rect_area);
-                Log.e("test", "" + bitmap.getWidth() + bitmap.getHeight());
-                pad.addRectRecord(bitmap, 520, 520);
+                //step2
+                pad.addRectRecord(bitmap, 200, 200);
             }
         });
 

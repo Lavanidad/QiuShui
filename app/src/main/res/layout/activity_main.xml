@@ -7,21 +7,41 @@
     tools:context=".MainActivity">
 
     <Button
-        android:id="@+id/bt1"
+        android:id="@+id/bt_none"
+        android:layout_width="200px"
+        android:layout_height="200px"
+        android:layout_margin="10px"
+        android:text="取消"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/bt_rect"
         android:layout_width="200px"
         android:layout_height="200px"
         android:text="禁行区"
-        app:layout_constraintStart_toStartOf="parent"
+        android:layout_margin="10px"
+        app:layout_constraintStart_toEndOf="@+id/bt_none"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/bt_add_rect"
+        android:layout_width="200px"
+        android:layout_height="200px"
+        android:text="添加禁行区"
+        android:layout_margin="10px"
+        android:visibility="invisible"
+        app:layout_constraintStart_toEndOf="@+id/bt_none"
+        app:layout_constraintTop_toBottomOf="@+id/bt_rect" />
 
 
     <com.lavanidad.qiushui.SketchpadView
         android:id="@+id/pad"
         android:layout_width="match_parent"
-        android:layout_height="1500px"
+        android:layout_height="wrap_content"
         android:layout_margin="10px"
-        app:layout_constraintStart_toStartOf="@+id/bt1"
-        app:layout_constraintTop_toBottomOf="@+id/bt1" />
+        app:layout_constraintStart_toStartOf="@+id/bt_add_rect"
+        app:layout_constraintTop_toBottomOf="@+id/bt_add_rect" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
