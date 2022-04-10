@@ -63,6 +63,7 @@ public class SketchpadView extends View {
     private int[] location = new int[2];  //当前的绝对坐标（X,Y）-> [0，1]
 
     private float curX, curY;//当前的坐标X Y
+    private float preX, preY;//需要移动的坐标
 
     private float downX, downY;//触摸下的X Y
 
@@ -77,7 +78,15 @@ public class SketchpadView extends View {
 
     //辅助onTouch事件，判断当前选中模式
     private int actionMode;
+    private static final int ACTION_NONE = 0x00;
     private static final int ACTION_SELECT_RECT_DOT = 0x01;
+    private static final int ACTION_SELECT_RECT_INSIDE = 0x02;
+
+    private int selectedPos;
+    private static final int UpperLeft = 0x00;
+    private static final int UpperRight = 0x01;
+    private static final int LowerRight = 0x02;
+    private static final int LowerLeft = 0x03;
 
 
     /**
@@ -88,7 +97,9 @@ public class SketchpadView extends View {
     private int strokeAlpha = 255;//画笔透明度
     private float strokeSize = 13.0f;
     private static float SCALE_MAX = 4.0f;
-
+    private static float SCALE_MIN = 0.2f;
+    private static float SCALE_MIN_LEN;
+    private Canvas canvas;
 
     public SketchpadView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -124,12 +135,13 @@ public class SketchpadView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        canvas = canvas;
         drawRecord(canvas);
         //X:671 Y:917
-        Log.e("test", "左上:" +  dotUpperLeftRect.centerX() + "," + dotUpperLeftRect.centerY());
-        Log.e("test", "右上:"+ dotUpperRightRect.centerX() + "," + dotUpperRightRect.centerY());
-        Log.e("test", "右下:" + dotLowerRightRect.centerX() + "," + dotLowerRightRect.centerY());
-        Log.e("test", "左下:" +  dotLowerLeftRect.centerX() + "," + dotLowerLeftRect.centerY());
+//        Log.e("test", "左上:" + dotUpperLeftRect.centerX() + "," + dotUpperLeftRect.centerY());
+//        Log.e("test", "右上:" + dotUpperRightRect.centerX() + "," + dotUpperRightRect.centerY());
+//        Log.e("test", "右下:" + dotLowerRightRect.centerX() + "," + dotLowerRightRect.centerY());
+//        Log.e("test", "左下:" + dotLowerLeftRect.centerX() + "," + dotLowerLeftRect.centerY());
 
     }
 
@@ -147,8 +159,10 @@ public class SketchpadView extends View {
     private void drawRecord(Canvas canvas, boolean isDrawBoard) {
         if (curSketchpadData != null) {
             //画矩形区域本体:设置的图片
-            for (RectRecord record : curSketchpadData.rectRecordList) {//TODO 可优化，不使用list
+            for (RectRecord record : curSketchpadData.rectRecordList) {
                 if (record != null) {
+                    //TODO 需要优化，改成画矩形
+                    //canvas.drawRect(record.rectOrigin, rectFramePaint);
                     canvas.drawBitmap(record.bitmap, record.matrix, null);
                 }
             }
@@ -159,7 +173,7 @@ public class SketchpadView extends View {
                 SCALE_MAX = curRectRecord.scaleMax;
                 //计算图片四个角点和中心点
                 float[] rectCorners = calculateCorners(curRectRecord);
-                Log.e("test","cor:" + Arrays.toString(rectCorners));
+                Log.e("test", "cor:" + Arrays.toString(rectCorners));
                 //绘制边框
                 //TODO drawRectFrame(canvas, rectCorners);
                 //绘制顶点
@@ -289,6 +303,7 @@ public class SketchpadView extends View {
                 invalidate();
                 break;
             case MotionEvent.ACTION_MOVE:
+                touchMove();
                 invalidate();
                 break;
             case MotionEvent.ACTION_UP:
@@ -298,6 +313,8 @@ public class SketchpadView extends View {
 
                 break;
         }
+        preX = curX;
+        preY = curY;
         return true;
     }
 
@@ -305,17 +322,89 @@ public class SketchpadView extends View {
     private void touchDown() {
         downX = curX;
         downY = curY;
-
         //如果当前是矩形模式
         if (curSketchpadData.drawMode == DrawMode.TYPE_RECT) {
             //触摸点
             float[] downPoint = new float[]{downX * drawDensity, downY * drawDensity};
+            //如果触摸了点
             if (isInRectDot(downPoint)) {
                 return;
+            }
+            //如果触摸矩形内部区域
+            Log.e("test", "isInRect:" + isInRect(curRectRecord, downPoint));
+            if (isInRect(curRectRecord, downPoint)) {
+                actionMode = ACTION_SELECT_RECT_INSIDE;
+                return;
+            }
+            //判断是否点击了其他图片
+            selectOther(downPoint);
+        }
+    }
+
+    private void touchMove() {
+        //如果是矩形
+        if (curSketchpadData.drawMode == DrawMode.TYPE_RECT && curRectRecord != null) {
+            if (actionMode == ACTION_SELECT_RECT_DOT) {
+                //选中边角点临边移动：拖动
+                rectDotMove(curRectRecord, (curX - preX) * drawDensity, (curY - preY) * drawDensity);
+            } else if (actionMode == ACTION_SELECT_RECT_INSIDE) {
+                //选中内部则整体移动：拖拽
+                rectMove((curX - preX) * drawDensity, (curY - preY) * drawDensity);
             }
         }
     }
 
+    /**
+     * TODO 选中顶点，临近的两边移动
+     *
+     * @param
+     */
+    private void rectDotMove(RectRecord rectRecord, float x, float y) {
+        float newX;
+        float newY;
+        newX = rectRecord.rectOrigin.width() + x;
+        newY = rectRecord.rectOrigin.height() + y;
+        rectRecord.rectOrigin.set(0, 0, newX, newY);
+//        switch (selectedPos) {
+//            case UpperLeft:
+//                rectRecord.rectOrigin.set(newX, newY, 0, 0);
+//                break;
+//            case UpperRight:
+//                rectRecord.rectOrigin.set(newX, newY, 0, 0);
+//                break;
+//            case LowerLeft:
+//                rectRecord.rectOrigin.set(0, 0, newX, newY);
+//                break;
+//            case LowerRight:
+//                rectRecord.rectOrigin.set(0, 0, newX, newY);
+//                break;
+//        }
+
+
+//        float[] corners = calculateCorners(rectRecord);
+//        //放大
+//        //目前触摸点与图片显示中心距离,curX*drawDensity为还原缩小密度点数值
+//        float a = (float) Math.sqrt(Math.pow(curX * drawDensity - corners[8], 2) + Math.pow(curY * drawDensity - corners[9], 2));
+//        //目前上次旋转图标与图片显示中心距离
+//        float b = (float) Math.sqrt(Math.pow(corners[4] - corners[0], 2) + Math.pow(corners[5] - corners[1], 2)) / 2;
+//        //设置Matrix缩放参数
+//        double photoLen = Math.sqrt(Math.pow(rectRecord.rectOrigin.width(), 2) + Math.pow(rectRecord.rectOrigin.height(), 2));
+//        if (a >= photoLen / 2 * SCALE_MIN && a >= SCALE_MIN_LEN && a <= photoLen / 2 * SCALE_MAX) {
+//            //这种计算方法可以保持旋转图标坐标与触摸点同步缩放
+//            float scale = a / b;
+//            rectRecord.matrix.postScale(scale, scale, corners[8], corners[9]);
+//        }
+    }
+
+    /**
+     * 矩形移动
+     *
+     * @param distanceX 移动距离
+     * @param distanceY
+     */
+    private void rectMove(float distanceX, float distanceY) {
+        curRectRecord.matrix.postTranslate((int) distanceX, (int) distanceY);
+    }
 
     /**
      * 判断是否选中了矩形顶点
@@ -324,14 +413,61 @@ public class SketchpadView extends View {
      */
     private boolean isInRectDot(float[] downPoint) {
         //如果选中了顶点，
-        if (dotUpperLeftRect.contains(downPoint[0], downPoint[1]) || dotUpperRightRect.contains(downPoint[0], downPoint[1])
-                || dotLowerLeftRect.contains(downPoint[0], downPoint[1]) || dotLowerRightRect.contains(downPoint[0], downPoint[1])) {
+        if (dotUpperLeftRect.contains(downPoint[0], downPoint[1])) {
             actionMode = ACTION_SELECT_RECT_DOT;
-            Log.e("test", "contains" + actionMode);
+            selectedPos = UpperLeft;
+            return true;
+        } else if (dotUpperRightRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_RECT_DOT;
+            selectedPos = UpperRight;
+            return true;
+        } else if (dotLowerLeftRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_RECT_DOT;
+            selectedPos = LowerLeft;
+            return true;
+        } else if (dotLowerRightRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_RECT_DOT;
+            selectedPos = LowerRight;
             return true;
         }
+        selectedPos = -1;
         Log.e("test", "no contains" + actionMode);
         return false;
+    }
+
+    /**
+     * 判断触摸点是否在矩形内部
+     *
+     * @param rectRecord
+     * @param downPoint
+     * @return
+     */
+    private boolean isInRect(RectRecord rectRecord, float[] downPoint) {
+        if (rectRecord != null) {
+            float[] invertPoint = new float[2];
+            Matrix invertMatrix = new Matrix();
+            rectRecord.matrix.invert(invertMatrix);
+            invertMatrix.mapPoints(invertPoint, downPoint);
+            return rectRecord.rectOrigin.contains(invertPoint[0], invertPoint[1]);
+        }
+        return false;
+    }
+
+    private void selectOther(float[] downPoint) {
+        RectRecord clickRecord = null;
+        for (int i = curSketchpadData.rectRecordList.size() - 1; i >= 0; i--) {
+            RectRecord record = curSketchpadData.rectRecordList.get(i);
+            if (isInRect(record, downPoint)) {
+                clickRecord = record;
+                break;
+            }
+        }
+        if (clickRecord != null) {
+            setRectRecord(clickRecord);
+            actionMode = ACTION_SELECT_RECT_INSIDE;
+        } else {
+            actionMode = ACTION_NONE;
+        }
     }
 
 
@@ -417,7 +553,6 @@ public class SketchpadView extends View {
             rectRecord.matrix.postTranslate(getWidth() / 2 - bitmap.getWidth() / 2, getHeight() / 2 - bitmap.getHeight() / 2);
 
         }
-
         return rectRecord;
     }
 
