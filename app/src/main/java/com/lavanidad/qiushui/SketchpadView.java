@@ -26,6 +26,7 @@ import com.lavanidad.qiushui.bean.SketchpadData;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.Arrays;
 
 public class SketchpadView extends View {
 
@@ -43,7 +44,13 @@ public class SketchpadView extends View {
      */
     private RectF confirmMarkRect = new RectF(0, 0, confirmMarkBM.getWidth(), confirmMarkBM.getHeight());
     private RectF cancelMarkRect = new RectF(0, 0, cancelMarkBM.getWidth(), cancelMarkBM.getHeight());
-    private RectF dotMarkRect = new RectF(0, 0, dotMarkBM.getWidth(), dotMarkBM.getHeight());
+    /**
+     * 四个顶点的矩形区域：用于判断是否被选中
+     */
+    private RectF dotUpperLeftRect = new RectF(0, 0, dotMarkBM.getWidth(), dotMarkBM.getHeight());
+    private RectF dotUpperRightRect = new RectF(0, 0, dotMarkBM.getWidth(), dotMarkBM.getHeight());
+    private RectF dotLowerRightRect = new RectF(0, 0, dotMarkBM.getWidth(), dotMarkBM.getHeight());
+    private RectF dotLowerLeftRect = new RectF(0, 0, dotMarkBM.getWidth(), dotMarkBM.getHeight());
 
     private Context context;
 
@@ -67,6 +74,10 @@ public class SketchpadView extends View {
 
     //画矩形边框的画笔
     private Paint rectFramePaint;
+
+    //辅助onTouch事件，判断当前选中模式
+    private int actionMode;
+    private static final int ACTION_SELECT_RECT_DOT = 0x01;
 
 
     /**
@@ -114,6 +125,12 @@ public class SketchpadView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         drawRecord(canvas);
+        //X:671 Y:917
+        Log.e("test", "左上:" +  dotUpperLeftRect.centerX() + "," + dotUpperLeftRect.centerY());
+        Log.e("test", "右上:"+ dotUpperRightRect.centerX() + "," + dotUpperRightRect.centerY());
+        Log.e("test", "右下:" + dotLowerRightRect.centerX() + "," + dotLowerRightRect.centerY());
+        Log.e("test", "左下:" +  dotLowerLeftRect.centerX() + "," + dotLowerLeftRect.centerY());
+
     }
 
     private void drawRecord(Canvas canvas) {
@@ -142,6 +159,7 @@ public class SketchpadView extends View {
                 SCALE_MAX = curRectRecord.scaleMax;
                 //计算图片四个角点和中心点
                 float[] rectCorners = calculateCorners(curRectRecord);
+                Log.e("test","cor:" + Arrays.toString(rectCorners));
                 //绘制边框
                 //TODO drawRectFrame(canvas, rectCorners);
                 //绘制顶点
@@ -210,25 +228,27 @@ public class SketchpadView extends View {
     private void drawRectDot(Canvas canvas, float[] rectCorners) {
         float x;
         float y;
+        //0,1代表左上角点XY 2,3代表右上角点XY
+        //6,7代表左下角点XY 4,5代表右下角点XY    //8,9代表中心点XY
 
-        x = rectCorners[0] - dotMarkRect.width() / 2 + 5;
-        y = rectCorners[1] - dotMarkRect.height() / 2 + 5;
-        dotMarkRect.offset(x, y);
+        x = rectCorners[0] - dotUpperLeftRect.width() / 2 + 5;
+        y = rectCorners[1] - dotUpperLeftRect.height() / 2 + 5;
+        dotUpperLeftRect.offsetTo(x, y);//调整至实际绘制区域
         canvas.drawBitmap(dotMarkBM, x, y, null);
 
-        x = rectCorners[2] - dotMarkRect.width() / 2 - 5;
-        y = rectCorners[3] - dotMarkRect.height() / 2 + 5;
-        dotMarkRect.offset(x, y);
+        x = rectCorners[2] - dotUpperRightRect.width() / 2 - 5;
+        y = rectCorners[3] - dotUpperRightRect.height() / 2 + 5;
+        dotUpperRightRect.offsetTo(x, y);
         canvas.drawBitmap(dotMarkBM, x, y, null);
 
-        x = rectCorners[4] - dotMarkRect.width() / 2 - 5;
-        y = rectCorners[5] - dotMarkRect.height() / 2 - 5;
-        dotMarkRect.offset(x, y);
+        x = rectCorners[4] - dotLowerRightRect.width() / 2 - 5;
+        y = rectCorners[5] - dotLowerRightRect.height() / 2 - 5;
+        dotLowerRightRect.offsetTo(x, y);
         canvas.drawBitmap(dotMarkBM, x, y, null);
 
-        x = rectCorners[6] - dotMarkRect.width() / 2 + 5;
-        y = rectCorners[7] - dotMarkRect.height() / 2 - 5;
-        dotMarkRect.offset(x, y);
+        x = rectCorners[6] - dotLowerLeftRect.width() / 2 + 5;
+        y = rectCorners[7] - dotLowerLeftRect.height() / 2 - 5;
+        dotLowerLeftRect.offsetTo(x, y);
         canvas.drawBitmap(dotMarkBM, x, y, null);
     }
 
@@ -245,10 +265,12 @@ public class SketchpadView extends View {
 
         x = rectCorners[8] + curRectRecord.rectOrigin.width() / 2 + 20;
         y = rectCorners[9] - confirmMarkRect.height() / 2;
+        confirmMarkRect.offset(x, y);
         canvas.drawBitmap(confirmMarkBM, x, y, null);
 
         x = rectCorners[8] - curRectRecord.rectOrigin.width() / 2 - cancelMarkRect.width() - 20;
         y = rectCorners[9] - cancelMarkRect.height() / 2;
+        cancelMarkRect.offset(x, y);
         canvas.drawBitmap(cancelMarkBM, x, y, null);
     }
 
@@ -283,6 +305,33 @@ public class SketchpadView extends View {
     private void touchDown() {
         downX = curX;
         downY = curY;
+
+        //如果当前是矩形模式
+        if (curSketchpadData.drawMode == DrawMode.TYPE_RECT) {
+            //触摸点
+            float[] downPoint = new float[]{downX * drawDensity, downY * drawDensity};
+            if (isInRectDot(downPoint)) {
+                return;
+            }
+        }
+    }
+
+
+    /**
+     * 判断是否选中了矩形顶点
+     *
+     * @param downPoint
+     */
+    private boolean isInRectDot(float[] downPoint) {
+        //如果选中了顶点，
+        if (dotUpperLeftRect.contains(downPoint[0], downPoint[1]) || dotUpperRightRect.contains(downPoint[0], downPoint[1])
+                || dotLowerLeftRect.contains(downPoint[0], downPoint[1]) || dotLowerRightRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_RECT_DOT;
+            Log.e("test", "contains" + actionMode);
+            return true;
+        }
+        Log.e("test", "no contains" + actionMode);
+        return false;
     }
 
 

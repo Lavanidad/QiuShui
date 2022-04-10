@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.rect_area);
                 //step2
-                pad.addRectRecord(bitmap, 200, 200);
+                pad.addRectRecord(bitmap, 400, 400);
             }
         });
 
