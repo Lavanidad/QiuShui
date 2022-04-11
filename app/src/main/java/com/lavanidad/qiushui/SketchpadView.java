@@ -81,6 +81,8 @@ public class SketchpadView extends View {
     private static final int ACTION_NONE = 0x00;
     private static final int ACTION_SELECT_RECT_DOT = 0x01;
     private static final int ACTION_SELECT_RECT_INSIDE = 0x02;
+    private static final int ACTION_SELECT_CONFIRM = 0x03;
+    private static final int ACTION_SELECT_CANCEL = 0x04;
 
     private int selectedPos;
     private static final int UpperLeft = 0x00;
@@ -136,13 +138,23 @@ public class SketchpadView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         canvas = canvas;
+        //drawBackground(canvas);
         drawRecord(canvas);
         //X:671 Y:917
-//        Log.e("test", "左上:" + dotUpperLeftRect.centerX() + "," + dotUpperLeftRect.centerY());
-//        Log.e("test", "右上:" + dotUpperRightRect.centerX() + "," + dotUpperRightRect.centerY());
-//        Log.e("test", "右下:" + dotLowerRightRect.centerX() + "," + dotLowerRightRect.centerY());
-//        Log.e("test", "左下:" + dotLowerLeftRect.centerX() + "," + dotLowerLeftRect.centerY());
+        Log.e("test", "左上:" + dotUpperLeftRect.centerX() + "," + dotUpperLeftRect.centerY());
+        Log.e("test", "右上:" + dotUpperRightRect.centerX() + "," + dotUpperRightRect.centerY());
+        Log.e("test", "右下:" + dotLowerRightRect.centerX() + "," + dotLowerRightRect.centerY());
+        Log.e("test", "左下:" + dotLowerLeftRect.centerX() + "," + dotLowerLeftRect.centerY());
 
+    }
+
+    public void drawBackground(Canvas canvas) {
+//            Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.test);
+//            Matrix matrix = new Matrix();
+//            float wScale = (float) canvas.getWidth() / bitmap.getWidth();
+//            float hScale = (float) canvas.getHeight() / bitmap.getHeight();
+//            matrix.postScale(wScale, hScale);
+//            canvas.drawBitmap(bitmap, matrix, null);
     }
 
     private void drawRecord(Canvas canvas) {
@@ -157,12 +169,14 @@ public class SketchpadView extends View {
      * @param isDrawBoard
      */
     private void drawRecord(Canvas canvas, boolean isDrawBoard) {
+
         if (curSketchpadData != null) {
             //画矩形区域本体:设置的图片
             for (RectRecord record : curSketchpadData.rectRecordList) {
                 if (record != null) {
-                    //TODO 需要优化，改成画矩形
-                    //canvas.drawRect(record.rectOrigin, rectFramePaint);
+                    //TODO
+//                float[] rectCorners = calculateCorners(curRectRecord);
+//                drawRectFrame(canvas, rectCorners);
                     canvas.drawBitmap(record.bitmap, record.matrix, null);
                 }
             }
@@ -175,7 +189,7 @@ public class SketchpadView extends View {
                 float[] rectCorners = calculateCorners(curRectRecord);
                 Log.e("test", "cor:" + Arrays.toString(rectCorners));
                 //绘制边框
-                //TODO drawRectFrame(canvas, rectCorners);
+                //drawRectFrame(canvas, rectCorners);
                 //绘制顶点
                 drawRectDot(canvas, rectCorners);
                 //绘制确认/取消
@@ -229,6 +243,7 @@ public class SketchpadView extends View {
         rectFramePath.lineTo(rectCorners[4], rectCorners[5]);
         rectFramePath.lineTo(rectCorners[6], rectCorners[7]);
         rectFramePath.close();
+        rectFramePath.setFillType(Path.FillType.INVERSE_EVEN_ODD);
         canvas.drawPath(rectFramePath, rectFramePaint);
     }
 
@@ -279,12 +294,12 @@ public class SketchpadView extends View {
 
         x = rectCorners[8] + curRectRecord.rectOrigin.width() / 2 + 20;
         y = rectCorners[9] - confirmMarkRect.height() / 2;
-        confirmMarkRect.offset(x, y);
+        confirmMarkRect.offsetTo(x, y);
         canvas.drawBitmap(confirmMarkBM, x, y, null);
 
         x = rectCorners[8] - curRectRecord.rectOrigin.width() / 2 - cancelMarkRect.width() - 20;
         y = rectCorners[9] - cancelMarkRect.height() / 2;
-        cancelMarkRect.offset(x, y);
+        cancelMarkRect.offsetTo(x, y);
         canvas.drawBitmap(cancelMarkBM, x, y, null);
     }
 
@@ -331,9 +346,12 @@ public class SketchpadView extends View {
                 return;
             }
             //如果触摸矩形内部区域
-            Log.e("test", "isInRect:" + isInRect(curRectRecord, downPoint));
             if (isInRect(curRectRecord, downPoint)) {
                 actionMode = ACTION_SELECT_RECT_INSIDE;
+                return;
+            }
+            //判断是否点击了确认/取消区域
+            if (isInButtonRect(downPoint)) {
                 return;
             }
             //判断是否点击了其他图片
@@ -364,6 +382,13 @@ public class SketchpadView extends View {
         float newY;
         newX = rectRecord.rectOrigin.width() + x;
         newY = rectRecord.rectOrigin.height() + y;
+
+        if (newX < 10) {
+            newX = 10;
+        }
+        if (newY < 10) {
+            newY = 10;
+        }
         rectRecord.rectOrigin.set(0, 0, newX, newY);
 //        switch (selectedPos) {
 //            case UpperLeft:
@@ -431,7 +456,6 @@ public class SketchpadView extends View {
             return true;
         }
         selectedPos = -1;
-        Log.e("test", "no contains" + actionMode);
         return false;
     }
 
@@ -449,6 +473,30 @@ public class SketchpadView extends View {
             rectRecord.matrix.invert(invertMatrix);
             invertMatrix.mapPoints(invertPoint, downPoint);
             return rectRecord.rectOrigin.contains(invertPoint[0], invertPoint[1]);
+        }
+        return false;
+    }
+
+    /**
+     * 判断触摸点是否在外部按钮上
+     *
+     * @param downPoint
+     * @return
+     */
+    private boolean isInButtonRect(float[] downPoint) {
+        if (confirmMarkRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_CONFIRM;
+            Toast.makeText(context, "确认顶点，调用JS方法", Toast.LENGTH_SHORT).show();
+            Log.e("tag", "true ACTION_SELECT_CONFIRM");
+            return true;
+        }
+        if (cancelMarkRect.contains(downPoint[0], downPoint[1])) {
+            Log.e("tag", "true ACTION_SELECT_CANCEL");
+            actionMode = ACTION_SELECT_CANCEL;
+            curSketchpadData.rectRecordList.remove(curRectRecord);
+            setRectRecord(null);//TODO addNull可能会导致的问题
+            actionMode = ACTION_NONE;
+            return true;
         }
         return false;
     }
@@ -513,6 +561,7 @@ public class SketchpadView extends View {
         }
     }
 
+
     /**
      * 设置最后绘制出的bitmap的宽高
      *
@@ -540,14 +589,13 @@ public class SketchpadView extends View {
      */
     @NonNull
     private RectRecord initRectRecord(Bitmap bitmap) {
-        Log.e(TAG, "list size1:" + curSketchpadData.rectRecordList.size());
         RectRecord rectRecord = new RectRecord();
         rectRecord.bitmap = bitmap;
         rectRecord.rectOrigin = new RectF(0, 0, rectRecord.bitmap.getWidth(), rectRecord.bitmap.getHeight());
         rectRecord.scaleMax = getMaxScale(rectRecord.rectOrigin);
-        if (curSketchpadData.rectRecordList.size() > 0) {//当前有多个图片
+        if (curSketchpadData.rectRecordList.size() > 0 && curRectRecord != null) {//有多个图片
             rectRecord.matrix = new Matrix(curRectRecord.matrix);
-            rectRecord.matrix.postTranslate(50, 50);//TODO 单位PX
+            rectRecord.matrix.postTranslate(50, 50);//单位PX
         } else {
             rectRecord.matrix = new Matrix();
             rectRecord.matrix.postTranslate(getWidth() / 2 - bitmap.getWidth() / 2, getHeight() / 2 - bitmap.getHeight() / 2);
@@ -573,7 +621,7 @@ public class SketchpadView extends View {
      */
     private void setRectRecord(RectRecord rectRecord) {
         curSketchpadData.rectRecordList.remove(rectRecord);
-        curSketchpadData.rectRecordList.add(rectRecord);
+        curSketchpadData.rectRecordList.add(rectRecord);//TODO 是否是问题存疑：当add(null)的时候，list.size=1 但是对象不存在
         curRectRecord = rectRecord;
         invalidate();
     }
