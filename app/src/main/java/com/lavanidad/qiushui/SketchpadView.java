@@ -141,6 +141,7 @@ public class SketchpadView extends View {
         //drawBackground(canvas);
         drawRecord(canvas);
         //X:671 Y:917
+        Log.e("test", TAG);
         Log.e("test", "左上:" + dotUpperLeftRect.centerX() + "," + dotUpperLeftRect.centerY());
         Log.e("test", "右上:" + dotUpperRightRect.centerX() + "," + dotUpperRightRect.centerY());
         Log.e("test", "右下:" + dotLowerRightRect.centerX() + "," + dotLowerRightRect.centerY());
@@ -174,9 +175,6 @@ public class SketchpadView extends View {
             //画矩形区域本体:设置的图片
             for (RectRecord record : curSketchpadData.rectRecordList) {
                 if (record != null) {
-                    //TODO
-//                float[] rectCorners = calculateCorners(curRectRecord);
-//                drawRectFrame(canvas, rectCorners);
                     canvas.drawBitmap(record.bitmap, record.matrix, null);
                 }
             }
@@ -288,16 +286,20 @@ public class SketchpadView extends View {
      * @param rectCorners
      */
     private void drawRectButton(Canvas canvas, float[] rectCorners) {
-        //位置在中点的延长线上
+        //利用边线计算按钮的位置
         float x;
         float y;
 
-        x = rectCorners[8] + curRectRecord.rectOrigin.width() / 2 + 20;
+//        x = rectCorners[8] + curRectRecord.rectOrigin.width() / 2 + 20;
+//        y = rectCorners[9] - confirmMarkRect.height() / 2;
+        x = rectCorners[2] + 20;
         y = rectCorners[9] - confirmMarkRect.height() / 2;
         confirmMarkRect.offsetTo(x, y);
         canvas.drawBitmap(confirmMarkBM, x, y, null);
 
-        x = rectCorners[8] - curRectRecord.rectOrigin.width() / 2 - cancelMarkRect.width() - 20;
+//        x = rectCorners[8] - curRectRecord.rectOrigin.width() / 2 - cancelMarkRect.width() - 20;
+//        y = rectCorners[9] - cancelMarkRect.height() / 2;
+        x = rectCorners[0] - cancelMarkRect.width() - 20;
         y = rectCorners[9] - cancelMarkRect.height() / 2;
         cancelMarkRect.offsetTo(x, y);
         canvas.drawBitmap(cancelMarkBM, x, y, null);
@@ -373,7 +375,7 @@ public class SketchpadView extends View {
     }
 
     /**
-     * TODO 选中顶点，临近的两边移动
+     * TODO 选中顶点，临近的两边移动,暂时只能实现放大缩小，问题在于如何区分边
      *
      * @param
      */
@@ -383,13 +385,17 @@ public class SketchpadView extends View {
         newX = rectRecord.rectOrigin.width() + x;
         newY = rectRecord.rectOrigin.height() + y;
 
+        float xscale = Math.abs(newX / rectRecord.rectOrigin.width());
+        float yscale = Math.abs(newY / rectRecord.rectOrigin.height());
+        Log.e("scale", "xscale:" + xscale + ",yscale:" + yscale);
+
         if (newX < 10) {
             newX = 10;
         }
         if (newY < 10) {
             newY = 10;
         }
-        rectRecord.rectOrigin.set(0, 0, newX, newY);
+        //rectRecord.rectOrigin.set(0, 0, newX, newY);
 //        switch (selectedPos) {
 //            case UpperLeft:
 //                rectRecord.rectOrigin.set(newX, newY, 0, 0);
@@ -406,19 +412,21 @@ public class SketchpadView extends View {
 //        }
 
 
-//        float[] corners = calculateCorners(rectRecord);
-//        //放大
-//        //目前触摸点与图片显示中心距离,curX*drawDensity为还原缩小密度点数值
-//        float a = (float) Math.sqrt(Math.pow(curX * drawDensity - corners[8], 2) + Math.pow(curY * drawDensity - corners[9], 2));
-//        //目前上次旋转图标与图片显示中心距离
-//        float b = (float) Math.sqrt(Math.pow(corners[4] - corners[0], 2) + Math.pow(corners[5] - corners[1], 2)) / 2;
-//        //设置Matrix缩放参数
-//        double photoLen = Math.sqrt(Math.pow(rectRecord.rectOrigin.width(), 2) + Math.pow(rectRecord.rectOrigin.height(), 2));
-//        if (a >= photoLen / 2 * SCALE_MIN && a >= SCALE_MIN_LEN && a <= photoLen / 2 * SCALE_MAX) {
-//            //这种计算方法可以保持旋转图标坐标与触摸点同步缩放
-//            float scale = a / b;
-//            rectRecord.matrix.postScale(scale, scale, corners[8], corners[9]);
-//        }
+        float[] corners = calculateCorners(rectRecord);
+        //放大
+        //目前触摸点与图片显示中心距离,curX*drawDensity为还原缩小密度点数值
+        float a = (float) Math.sqrt(Math.pow(curX * drawDensity - corners[8], 2) + Math.pow(curY * drawDensity - corners[9], 2));
+        //目前上次旋转图标与图片显示中心距离
+        float b = (float) Math.sqrt(Math.pow(corners[4] - corners[0], 2) + Math.pow(corners[5] - corners[1], 2)) / 2;
+        //设置Matrix缩放参数
+        double photoLen = Math.sqrt(Math.pow(rectRecord.rectOrigin.width(), 2) + Math.pow(rectRecord.rectOrigin.height(), 2));
+        if (a >= photoLen / 2 * SCALE_MIN && a >= SCALE_MIN_LEN && a <= photoLen / 2 * SCALE_MAX) {
+            //这种计算方法可以保持旋转图标坐标与触摸点同步缩放
+            float scale = a / b;
+            Log.e("scale", "scale:" + scale);
+            rectRecord.matrix.postScale(scale, scale, corners[8], corners[9]);
+            //   rectRecord.matrix.postScale(scale, scale, corners[8], corners[9]);
+        }
     }
 
     /**
