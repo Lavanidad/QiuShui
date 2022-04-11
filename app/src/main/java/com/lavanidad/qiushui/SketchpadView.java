@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
@@ -21,6 +22,7 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.lavanidad.qiushui.bean.LineRecord;
 import com.lavanidad.qiushui.bean.RectRecord;
 import com.lavanidad.qiushui.bean.SketchpadData;
 
@@ -40,10 +42,17 @@ public class SketchpadView extends View {
     private Bitmap dotMarkBM = BitmapFactory.decodeResource(getResources(), R.mipmap.round_dot);
 
     /**
-     * 确认,取消,顶点 图标区域
+     * 矩形确认,取消,顶点 图标区域
      */
-    private RectF confirmMarkRect = new RectF(0, 0, confirmMarkBM.getWidth(), confirmMarkBM.getHeight());
-    private RectF cancelMarkRect = new RectF(0, 0, cancelMarkBM.getWidth(), cancelMarkBM.getHeight());
+    private RectF rectConfirmMarkRect = new RectF(0, 0, confirmMarkBM.getWidth(), confirmMarkBM.getHeight());
+    private RectF rectCancelMarkRect = new RectF(0, 0, cancelMarkBM.getWidth(), cancelMarkBM.getHeight());
+
+    /**
+     * 线段确认,取消,顶点 图标区域
+     */
+    private RectF lineConfirmMarkRect = new RectF(0, 0, confirmMarkBM.getWidth(), confirmMarkBM.getHeight());
+    private RectF lineCancelMarkRect = new RectF(0, 0, cancelMarkBM.getWidth(), cancelMarkBM.getHeight());
+
     /**
      * 四个顶点的矩形区域：用于判断是否被选中
      */
@@ -52,10 +61,17 @@ public class SketchpadView extends View {
     private RectF dotLowerRightRect = new RectF(0, 0, dotMarkBM.getWidth(), dotMarkBM.getHeight());
     private RectF dotLowerLeftRect = new RectF(0, 0, dotMarkBM.getWidth(), dotMarkBM.getHeight());
 
+    /**
+     * 线段的两个端点区域
+     */
+    private RectF dotLeftLineRect = new RectF(0, 0, dotMarkBM.getWidth(), dotMarkBM.getHeight());
+    private RectF dotRightLineRect = new RectF(0, 0, dotMarkBM.getWidth(), dotMarkBM.getHeight());
+
     private Context context;
 
     private SketchpadData curSketchpadData;//记录画板上的元素
     private RectRecord curRectRecord;//矩形区域的属性
+    private LineRecord curLineRecord;//线区域的属性
 
 
     private int mWidth, mHeight;//？宽高
@@ -78,18 +94,23 @@ public class SketchpadView extends View {
 
     //辅助onTouch事件，判断当前选中模式
     private int actionMode;
-    private static final int ACTION_NONE = 0x00;
-    private static final int ACTION_SELECT_RECT_DOT = 0x01;
-    private static final int ACTION_SELECT_RECT_INSIDE = 0x02;
-    private static final int ACTION_SELECT_CONFIRM = 0x03;
-    private static final int ACTION_SELECT_CANCEL = 0x04;
+    private static final int ACTION_NONE = 0x100;
+    private static final int ACTION_SELECT_RECT_DOT = 0x101;
+    private static final int ACTION_SELECT_RECT_INSIDE = 0x102;
+    private static final int ACTION_SELECT_RECT_CONFIRM = 0x103;
+    private static final int ACTION_SELECT_RECT_CANCEL = 0x104;
+    private static final int ACTION_SELECT_LINE_DOT = 0x105;
+    private static final int ACTION_SELECT_LINE_INSIDE = 0x106;
+    private static final int ACTION_SELECT_LINE_CONFIRM = 0x107;
+    private static final int ACTION_SELECT_LINE_CANCEL = 0x108;
 
     private int selectedPos;
-    private static final int UpperLeft = 0x00;
-    private static final int UpperRight = 0x01;
-    private static final int LowerRight = 0x02;
-    private static final int LowerLeft = 0x03;
-
+    private static final int UpperLeft = 0x200;
+    private static final int UpperRight = 0x201;
+    private static final int LowerRight = 0x202;
+    private static final int LowerLeft = 0x203;
+    private static final int LineLeft = 0x204;
+    private static final int LineRight = 0x205;
 
     /**
      * 测试数据设置
@@ -158,18 +179,12 @@ public class SketchpadView extends View {
 //            canvas.drawBitmap(bitmap, matrix, null);
     }
 
-    private void drawRecord(Canvas canvas) {
-        drawRecord(canvas, true);
-    }
-
-
     /**
      * 绘制的主要方法
      *
      * @param canvas
-     * @param isDrawBoard
      */
-    private void drawRecord(Canvas canvas, boolean isDrawBoard) {
+    private void drawRecord(Canvas canvas) {
 
         if (curSketchpadData != null) {
             //画矩形区域本体:设置的图片
@@ -178,9 +193,14 @@ public class SketchpadView extends View {
                     canvas.drawBitmap(record.bitmap, record.matrix, null);
                 }
             }
-            //画矩形选中框
-            if (curSketchpadData.drawMode != DrawMode.TYPE_NONE && curSketchpadData.drawMode == DrawMode.TYPE_RECT
-                    && curRectRecord != null) {
+            //画线段
+            for (LineRecord record : curSketchpadData.lineRecordList) {
+                if (record != null) {
+                    canvas.drawBitmap(record.bitmap, record.matrix, null);
+                }
+            }
+            //画矩形框
+            if (curSketchpadData.drawMode == DrawMode.TYPE_RECT && curRectRecord != null) {
                 //放大最大值
                 SCALE_MAX = curRectRecord.scaleMax;
                 //计算图片四个角点和中心点
@@ -193,7 +213,62 @@ public class SketchpadView extends View {
                 //绘制确认/取消
                 drawRectButton(canvas, rectCorners);
             }
+            //TODO
+            if (curSketchpadData.drawMode == DrawMode.TYPE_LINE && curLineRecord != null) {
+                //放大最大值
+                SCALE_MAX = curLineRecord.scaleMax;
+                float[] lineCorners = calculateLine(curLineRecord);
+                //绘制端点
+                drawLineDot(canvas, lineCorners);
+                //绘制确认/取消
+                drawLineButton(canvas, lineCorners);
+            }
         }
+    }
+
+    /**
+     * 计算线段上需要使用到的点
+     *
+     * @param lineRecord
+     * @return
+     */
+    private float[] calculateLine(LineRecord lineRecord) {
+        float[] lineCornersSrc = new float[6];
+        float[] lineCorners = new float[6];
+        RectF rectF = lineRecord.lineOrigin;
+        //0,1代表左点XY
+        lineCornersSrc[0] = rectF.left;
+        lineCornersSrc[1] = (rectF.top + rectF.bottom) / 2;
+        //2,3代表右点XY
+        lineCornersSrc[2] = rectF.right;
+        lineCornersSrc[3] = (rectF.top + rectF.bottom) / 2;
+        //4,5代表中点XY
+        lineCornersSrc[4] = rectF.centerX();
+        lineCornersSrc[5] = rectF.centerY();
+        curLineRecord.matrix.mapPoints(lineCorners, lineCornersSrc);
+        return lineCorners;
+    }
+
+    /**
+     * 绘制线段左右顶点
+     *
+     * @param canvas
+     * @param lineCorners
+     */
+    private void drawLineDot(Canvas canvas, float[] lineCorners) {
+        float x;
+        float y;
+        //0,1代表左点XY 2,3代表右点XY 4,5代表中点XY
+
+        x = lineCorners[0] - dotLeftLineRect.width() / 2;
+        y = lineCorners[1] - dotLeftLineRect.height() / 2;
+        dotLeftLineRect.offsetTo(x, y);//调整至实际绘制区域
+        canvas.drawBitmap(dotMarkBM, x, y, null);
+
+        x = lineCorners[2] - dotRightLineRect.width() / 2;
+        y = lineCorners[3] - dotRightLineRect.height() / 2;
+        dotRightLineRect.offsetTo(x, y);
+        canvas.drawBitmap(dotMarkBM, x, y, null);
     }
 
     /**
@@ -280,7 +355,7 @@ public class SketchpadView extends View {
     }
 
     /**
-     * 绘制确认/取消按钮
+     * 绘制矩形确认/取消按钮
      *
      * @param canvas
      * @param rectCorners
@@ -293,16 +368,43 @@ public class SketchpadView extends View {
 //        x = rectCorners[8] + curRectRecord.rectOrigin.width() / 2 + 20;
 //        y = rectCorners[9] - confirmMarkRect.height() / 2;
         x = rectCorners[2] + 20;
-        y = rectCorners[9] - confirmMarkRect.height() / 2;
-        confirmMarkRect.offsetTo(x, y);
+        y = rectCorners[9] - rectConfirmMarkRect.height() / 2;
+        rectConfirmMarkRect.offsetTo(x, y);
         canvas.drawBitmap(confirmMarkBM, x, y, null);
 
 //        x = rectCorners[8] - curRectRecord.rectOrigin.width() / 2 - cancelMarkRect.width() - 20;
 //        y = rectCorners[9] - cancelMarkRect.height() / 2;
-        x = rectCorners[0] - cancelMarkRect.width() - 20;
-        y = rectCorners[9] - cancelMarkRect.height() / 2;
-        cancelMarkRect.offsetTo(x, y);
+        x = rectCorners[0] - rectCancelMarkRect.width() - 20;
+        y = rectCorners[9] - rectCancelMarkRect.height() / 2;
+        rectCancelMarkRect.offsetTo(x, y);
         canvas.drawBitmap(cancelMarkBM, x, y, null);
+    }
+
+    /**
+     * TODO 需要一个计算公式，绘制线段确认/取消按钮
+     *
+     * @param canvas
+     * @param lineCorners
+     */
+    private void drawLineButton(Canvas canvas, float[] lineCorners) {
+        float x;
+        float y;
+        Log.e("btn", "center:" + lineCorners[4] + "," + lineCorners[5]);
+        Log.e("btn", "left:" + lineCorners[0] + "," + lineCorners[1]);
+        Log.e("btn", "right:" + lineCorners[2] + "," + lineCorners[3]);
+        Log.e("btn", "width:" + lineConfirmMarkRect.width() + "height:" + lineConfirmMarkRect.height());
+        Log.e("btn", "1111:" + curLineRecord.lineOrigin.width() + "22222:" + curLineRecord.lineOrigin.height());
+
+        x = lineCorners[4] - lineConfirmMarkRect.width() / 2;
+        y = lineCorners[5] - lineConfirmMarkRect.height() - 30;
+        lineConfirmMarkRect.offsetTo(x, y);
+        canvas.drawBitmap(confirmMarkBM, x, y, null);
+
+        x = lineCorners[4] - lineCancelMarkRect.width() / 2;
+        y = lineCorners[5] + lineCancelMarkRect.height() / 2 - 20;
+        lineCancelMarkRect.offsetTo(x, y);
+        canvas.drawBitmap(cancelMarkBM, x, y, null);
+
     }
 
 
@@ -324,6 +426,7 @@ public class SketchpadView extends View {
                 invalidate();
                 break;
             case MotionEvent.ACTION_UP:
+                touchUp();
                 invalidate();
                 break;
             case MotionEvent.ACTION_POINTER_DOWN:
@@ -357,7 +460,26 @@ public class SketchpadView extends View {
                 return;
             }
             //判断是否点击了其他图片
-            selectOther(downPoint);
+            selectOtherRect(downPoint);
+        }
+        //如果当前是线段模式
+        if (curSketchpadData.drawMode == DrawMode.TYPE_LINE) {
+            //触摸点
+            float[] downPoint = new float[]{downX * drawDensity, downY * drawDensity};
+            //如果触摸了点
+            if (isInLineDot(downPoint)) {
+                return;
+            }
+            //如果触摸内部区域
+            if (isInLine(curLineRecord, downPoint)) {
+                actionMode = ACTION_SELECT_LINE_INSIDE;
+                return;
+            }
+            //判断是否点击了确认/取消区域
+            if (isInLineButtonRect(downPoint)) {
+                return;
+            }
+            selectOtherLine(downPoint);
         }
     }
 
@@ -372,60 +494,152 @@ public class SketchpadView extends View {
                 rectMove((curX - preX) * drawDensity, (curY - preY) * drawDensity);
             }
         }
+        //如果是线段
+        if (curSketchpadData.drawMode == DrawMode.TYPE_LINE && curLineRecord != null) {
+            if (actionMode == ACTION_SELECT_LINE_DOT) {
+                //拉长缩短+旋转
+                lineMoveAndRotate(curLineRecord, (curX - preX) * drawDensity, (curY - preY) * drawDensity);
+
+            } else if (actionMode == ACTION_SELECT_LINE_INSIDE) {
+                //选中内部则整体移动：拖拽
+                lineMove((curX - preX) * drawDensity, (curY - preY) * drawDensity);
+            }
+        }
+    }
+
+    private void touchUp() {
+
+    }
+
+    private void lineMoveAndRotate(LineRecord lineRecord, float x, float y) {
+        float[] corners = calculateLine(lineRecord);
+
+        /**
+         * 旋转用参数
+         */
+        PointF preVector = new PointF();
+        PointF curVector = new PointF();
+        PointF verticalVec;
+        double preVectorLen;
+        double curVectorLen;
+        double cosAlpha;
+        double dAngle;
+        double vDot;
+
+        /**
+         * 移动参数
+         */
+        float newX;
+        float newY;
+        float xscale;
+        float yscale;
+
+        switch (selectedPos) {
+            case LineLeft:
+                //旋转
+                preVector.set((preX * drawDensity - corners[2]), preY * drawDensity - corners[3]);//旋转后向量
+                curVector.set(curX * drawDensity - corners[2], curY * drawDensity - corners[3]);//旋转前向量
+                preVectorLen = getVectorLength(preVector);
+                curVectorLen = getVectorLength(curVector);
+                cosAlpha = (preVector.x * curVector.x + preVector.y * curVector.y)
+                        / (preVectorLen * curVectorLen);
+                if (cosAlpha > 1.0f) {
+                    cosAlpha = 1.0f;
+                }
+                dAngle = Math.acos(cosAlpha) * 180.0 / Math.PI;
+                preVector.x /= preVectorLen;
+                preVector.y /= preVectorLen;
+                curVector.x /= curVectorLen;
+                curVector.y /= curVectorLen;
+                verticalVec = new PointF(curVector.y, -curVector.x);
+                vDot = preVector.x * verticalVec.x + preVector.y * verticalVec.y;
+                if (vDot > 0) {
+                } else {
+                    dAngle = -dAngle;
+                }
+                lineRecord.matrix.postRotate((float) dAngle, corners[2], corners[3]);
+                break;
+            case LineRight:
+                preVector.set((preX * drawDensity - corners[0]), preY * drawDensity - corners[1]);//旋转后向量
+                curVector.set(curX * drawDensity - corners[0], curY * drawDensity - corners[1]);//旋转前向量
+                preVectorLen = getVectorLength(preVector);
+                curVectorLen = getVectorLength(curVector);
+                cosAlpha = (preVector.x * curVector.x + preVector.y * curVector.y)
+                        / (preVectorLen * curVectorLen);
+                if (cosAlpha > 1.0f) {
+                    cosAlpha = 1.0f;
+                }
+                dAngle = Math.acos(cosAlpha) * 180.0 / Math.PI;
+                preVector.x /= preVectorLen;
+                preVector.y /= preVectorLen;
+                curVector.x /= curVectorLen;
+                curVector.y /= curVectorLen;
+                verticalVec = new PointF(curVector.y, -curVector.x);
+                vDot = preVector.x * verticalVec.x + preVector.y * verticalVec.y;
+                if (vDot > 0) {
+                } else {
+                    dAngle = -dAngle;
+                }
+                lineRecord.matrix.postRotate((float) dAngle, corners[0], corners[1]);
+                break;
+        }
     }
 
     /**
-     * TODO 选中顶点，临近的两边移动,暂时只能实现放大缩小，问题在于如何区分边
+     * 获取p1到p2的线段的长度
+     *
+     * @return
+     */
+    public double getVectorLength(PointF vector) {
+        return Math.sqrt(vector.x * vector.x + vector.y * vector.y);
+    }
+
+    /**
+     * TODO 选中顶点，临近的两边移动, bug：移动的距离和实际手指距离不同，问题在于newX=中的rectRecord.rectOrigin本体没变化
      *
      * @param
      */
     private void rectDotMove(RectRecord rectRecord, float x, float y) {
         float newX;
         float newY;
-        newX = rectRecord.rectOrigin.width() + x;
-        newY = rectRecord.rectOrigin.height() + y;
-
-        float xscale = Math.abs(newX / rectRecord.rectOrigin.width());
-        float yscale = Math.abs(newY / rectRecord.rectOrigin.height());
-        Log.e("scale", "xscale:" + xscale + ",yscale:" + yscale);
-
-        if (newX < 10) {
-            newX = 10;
-        }
-        if (newY < 10) {
-            newY = 10;
-        }
-        //rectRecord.rectOrigin.set(0, 0, newX, newY);
-//        switch (selectedPos) {
-//            case UpperLeft:
-//                rectRecord.rectOrigin.set(newX, newY, 0, 0);
-//                break;
-//            case UpperRight:
-//                rectRecord.rectOrigin.set(newX, newY, 0, 0);
-//                break;
-//            case LowerLeft:
-//                rectRecord.rectOrigin.set(0, 0, newX, newY);
-//                break;
-//            case LowerRight:
-//                rectRecord.rectOrigin.set(0, 0, newX, newY);
-//                break;
-//        }
-
+        float xscale;
+        float yscale;
 
         float[] corners = calculateCorners(rectRecord);
-        //放大
-        //目前触摸点与图片显示中心距离,curX*drawDensity为还原缩小密度点数值
-        float a = (float) Math.sqrt(Math.pow(curX * drawDensity - corners[8], 2) + Math.pow(curY * drawDensity - corners[9], 2));
-        //目前上次旋转图标与图片显示中心距离
-        float b = (float) Math.sqrt(Math.pow(corners[4] - corners[0], 2) + Math.pow(corners[5] - corners[1], 2)) / 2;
-        //设置Matrix缩放参数
-        double photoLen = Math.sqrt(Math.pow(rectRecord.rectOrigin.width(), 2) + Math.pow(rectRecord.rectOrigin.height(), 2));
-        if (a >= photoLen / 2 * SCALE_MIN && a >= SCALE_MIN_LEN && a <= photoLen / 2 * SCALE_MAX) {
-            //这种计算方法可以保持旋转图标坐标与触摸点同步缩放
-            float scale = a / b;
-            Log.e("scale", "scale:" + scale);
-            rectRecord.matrix.postScale(scale, scale, corners[8], corners[9]);
-            //   rectRecord.matrix.postScale(scale, scale, corners[8], corners[9]);
+        //rectRecord.rectOrigin.set(0, 0, newX, newY);
+        switch (selectedPos) {
+            case UpperLeft:
+                newX = rectRecord.rectOrigin.width() - x;
+                newY = rectRecord.rectOrigin.height() - y;
+                xscale = newX / rectRecord.rectOrigin.width();
+                yscale = newY / rectRecord.rectOrigin.height();
+                rectRecord.matrix.postScale(xscale, yscale, corners[4], corners[5]);
+                Log.e("tag", "test:" + rectRecord.rectOrigin.width() + ",height:" + rectRecord.rectOrigin.height());
+                break;
+            case UpperRight:
+                newX = rectRecord.rectOrigin.width() + x;
+                newY = rectRecord.rectOrigin.height() - y;
+                xscale = newX / rectRecord.rectOrigin.width();
+                yscale = newY / rectRecord.rectOrigin.height();
+                rectRecord.matrix.postScale(xscale, yscale, corners[6], corners[7]);
+                //rectRecord.matrix.postScale(xscale, 1, corners[6], corners[7]);
+                //rectRecord.rectOrigin.set(rectRecord.rectOrigin.left, rectRecord.rectOrigin.top, rectRecord.rectOrigin.right * xscale, rectRecord.rectOrigin.bottom);
+                Log.e("tag", "test:" + rectRecord.rectOrigin.width() + ",height:" + rectRecord.rectOrigin.height());
+                break;
+            case LowerLeft:
+                newX = rectRecord.rectOrigin.width() - x;
+                newY = rectRecord.rectOrigin.height() + y;
+                xscale = newX / rectRecord.rectOrigin.width();
+                yscale = newY / rectRecord.rectOrigin.height();
+                rectRecord.matrix.postScale(xscale, yscale, corners[2], corners[3]);
+                break;
+            case LowerRight:
+                newX = rectRecord.rectOrigin.width() + x;
+                newY = rectRecord.rectOrigin.height() + y;
+                xscale = newX / rectRecord.rectOrigin.width();
+                yscale = newY / rectRecord.rectOrigin.height();
+                rectRecord.matrix.postScale(xscale, yscale, corners[0], corners[1]);
+                break;
         }
     }
 
@@ -437,6 +651,16 @@ public class SketchpadView extends View {
      */
     private void rectMove(float distanceX, float distanceY) {
         curRectRecord.matrix.postTranslate((int) distanceX, (int) distanceY);
+    }
+
+    /**
+     * 线段移动
+     *
+     * @param distanceX
+     * @param distanceY
+     */
+    private void lineMove(float distanceX, float distanceY) {
+        curLineRecord.matrix.postTranslate((int) distanceX, (int) distanceY);
     }
 
     /**
@@ -486,21 +710,60 @@ public class SketchpadView extends View {
     }
 
     /**
+     * 判断触摸点是否在线段端点
+     *
+     * @param downPoint
+     * @return
+     */
+    private boolean isInLineDot(float[] downPoint) {
+        if (dotLeftLineRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_LINE_DOT;
+            selectedPos = LineLeft;
+            return true;
+        } else if (dotRightLineRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_LINE_DOT;
+            selectedPos = LineRight;
+            return true;
+        }
+        selectedPos = -1;
+        return false;
+    }
+
+    /**
+     * 判断是否在线段内部 TODO bug精准度，不好选中的问题
+     *
+     * @param lineRecord
+     * @param downPoint
+     * @return
+     */
+    private boolean isInLine(LineRecord lineRecord, float[] downPoint) {
+        //容差值
+        float tol = 2.0f;
+        if (lineRecord != null) {
+            float[] invertPoint = new float[2];
+            Matrix invertMatrix = new Matrix();
+            lineRecord.matrix.invert(invertMatrix);
+            invertMatrix.mapPoints(invertPoint, downPoint);
+            return lineRecord.lineOrigin.contains(invertPoint[0], invertPoint[1]);
+        }
+        return false;
+    }
+
+
+    /**
      * 判断触摸点是否在外部按钮上
      *
      * @param downPoint
      * @return
      */
     private boolean isInButtonRect(float[] downPoint) {
-        if (confirmMarkRect.contains(downPoint[0], downPoint[1])) {
-            actionMode = ACTION_SELECT_CONFIRM;
+        if (rectConfirmMarkRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_RECT_CONFIRM;
             Toast.makeText(context, "确认顶点，调用JS方法", Toast.LENGTH_SHORT).show();
-            Log.e("tag", "true ACTION_SELECT_CONFIRM");
             return true;
         }
-        if (cancelMarkRect.contains(downPoint[0], downPoint[1])) {
-            Log.e("tag", "true ACTION_SELECT_CANCEL");
-            actionMode = ACTION_SELECT_CANCEL;
+        if (rectCancelMarkRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_RECT_CANCEL;
             curSketchpadData.rectRecordList.remove(curRectRecord);
             setRectRecord(null);//TODO addNull可能会导致的问题
             actionMode = ACTION_NONE;
@@ -509,7 +772,23 @@ public class SketchpadView extends View {
         return false;
     }
 
-    private void selectOther(float[] downPoint) {
+    private boolean isInLineButtonRect(float[] downPoint) {
+        if (lineConfirmMarkRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_LINE_CONFIRM;
+            Toast.makeText(context, "确认顶点，调用JS方法", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+        if (lineCancelMarkRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_LINE_CANCEL;
+            curSketchpadData.lineRecordList.remove(curLineRecord);
+            setLineRecord(null);//TODO addNull可能会导致的问题
+            actionMode = ACTION_NONE;
+            return true;
+        }
+        return false;
+    }
+
+    private void selectOtherRect(float[] downPoint) {
         RectRecord clickRecord = null;
         for (int i = curSketchpadData.rectRecordList.size() - 1; i >= 0; i--) {
             RectRecord record = curSketchpadData.rectRecordList.get(i);
@@ -521,6 +800,23 @@ public class SketchpadView extends View {
         if (clickRecord != null) {
             setRectRecord(clickRecord);
             actionMode = ACTION_SELECT_RECT_INSIDE;
+        } else {
+            actionMode = ACTION_NONE;
+        }
+    }
+
+    private void selectOtherLine(float[] downPoint) {
+        LineRecord clickRecord = null;
+        for (int i = curSketchpadData.lineRecordList.size() - 1; i >= 0; i--) {
+            LineRecord record = curSketchpadData.lineRecordList.get(i);
+            if (isInLine(record, downPoint)) {
+                clickRecord = record;
+                break;
+            }
+        }
+        if (clickRecord != null) {
+            setLineRecord(clickRecord);
+            actionMode = ACTION_SELECT_LINE_INSIDE;
         } else {
             actionMode = ACTION_NONE;
         }
@@ -549,6 +845,7 @@ public class SketchpadView extends View {
     public void setSketchData(SketchpadData sketchpadData) {
         this.curSketchpadData = sketchpadData;
         curRectRecord = null;
+        curLineRecord = null;
     }
 
     /**
@@ -569,6 +866,19 @@ public class SketchpadView extends View {
         }
     }
 
+    /**
+     * 添加线
+     *
+     * @param length
+     */
+    public void addLineRecord(Bitmap bitmap, int length) {
+        if (bitmap != null) {
+            LineRecord lineRecord = initLineRecord(setBitmapWH(bitmap, length, 8), length);
+            setLineRecord(lineRecord);
+        } else {
+            Toast.makeText(context, "bitmap can not be null", Toast.LENGTH_SHORT).show();
+        }
+    }
 
     /**
      * 设置最后绘制出的bitmap的宽高
@@ -613,6 +923,28 @@ public class SketchpadView extends View {
     }
 
     /**
+     * 初始线段数据
+     *
+     * @param bitmap
+     * @return
+     */
+    @NonNull
+    private LineRecord initLineRecord(Bitmap bitmap, int length) {
+        LineRecord lineRecord = new LineRecord();
+        lineRecord.bitmap = bitmap;
+        lineRecord.lineOrigin = new RectF(0, 0, lineRecord.bitmap.getWidth(), lineRecord.bitmap.getHeight());
+        lineRecord.scaleMax = getMaxScale(lineRecord.lineOrigin);
+        if (curSketchpadData.lineRecordList.size() > 0 && curLineRecord != null) {//有多个图片
+            lineRecord.matrix = new Matrix(curLineRecord.matrix);
+            lineRecord.matrix.postTranslate(0, 80);//单位PX
+        } else {
+            lineRecord.matrix = new Matrix();
+            lineRecord.matrix.postTranslate(getWidth() / 2 - bitmap.getWidth() / 2, getHeight() / 2 - length);
+        }
+        return lineRecord;
+    }
+
+    /**
      * 获取放大倍数
      *
      * @param rectF
@@ -633,6 +965,20 @@ public class SketchpadView extends View {
         curRectRecord = rectRecord;
         invalidate();
     }
+
+
+    /**
+     * 设置线区域，数据已暂存给 curLineRecord，下一步来绘制
+     *
+     * @param lineRecord
+     */
+    private void setLineRecord(LineRecord lineRecord) {
+        curSketchpadData.lineRecordList.remove(lineRecord);
+        curSketchpadData.lineRecordList.add(lineRecord);
+        curLineRecord = lineRecord;
+        invalidate();
+    }
+
 
     /**
      * 获取当前绘画模式

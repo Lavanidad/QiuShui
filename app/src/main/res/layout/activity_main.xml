@@ -17,7 +17,7 @@
 
     <Button
         android:id="@+id/bt_rect"
-        android:layout_width="200px"
+        android:layout_width="240px"
         android:layout_height="200px"
         android:text="禁行区"
         android:layout_margin="10px"
@@ -26,12 +26,31 @@
 
     <Button
         android:id="@+id/bt_add_rect"
-        android:layout_width="200px"
+        android:layout_width="240px"
         android:layout_height="200px"
         android:text="添加禁行区"
         android:layout_margin="10px"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_none"
+        app:layout_constraintTop_toBottomOf="@+id/bt_rect" />
+
+    <Button
+        android:id="@+id/bt_line"
+        android:layout_width="240px"
+        android:layout_height="200px"
+        android:text="虚拟墙"
+        android:layout_margin="10px"
+        app:layout_constraintStart_toEndOf="@+id/bt_rect"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/bt_add_line"
+        android:layout_width="240px"
+        android:layout_height="200px"
+        android:text="虚拟墙"
+        android:layout_margin="10px"
+        android:visibility="invisible"
+        app:layout_constraintStart_toEndOf="@+id/bt_rect"
         app:layout_constraintTop_toBottomOf="@+id/bt_rect" />
 
 

@@ -8,10 +8,12 @@ import java.util.List;
 public class SketchpadData {
 
     public List<RectRecord> rectRecordList;
+    public List<LineRecord> lineRecordList;
     public int drawMode;
 
     public SketchpadData() {
         rectRecordList = new ArrayList<>();
+        lineRecordList = new ArrayList<>();
         drawMode = SketchpadView.DrawMode.TYPE_NONE;
     }
 
