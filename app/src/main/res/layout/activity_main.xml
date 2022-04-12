@@ -9,7 +9,7 @@
     <Button
         android:id="@+id/bt_none"
         android:layout_width="200px"
-        android:layout_height="150px"
+        android:layout_height="180px"
         android:layout_margin="10px"
         android:text="取消"
         app:layout_constraintStart_toStartOf="parent"
@@ -18,7 +18,7 @@
     <Button
         android:id="@+id/bt_rect"
         android:layout_width="240px"
-        android:layout_height="150px"
+        android:layout_height="180px"
         android:text="禁行区"
         android:layout_margin="10px"
         app:layout_constraintStart_toEndOf="@+id/bt_none"
@@ -27,7 +27,7 @@
     <Button
         android:id="@+id/bt_add_rect"
         android:layout_width="240px"
-        android:layout_height="200px"
+        android:layout_height="180px"
         android:text="添加禁行区"
         android:layout_margin="10px"
         android:visibility="invisible"
@@ -37,7 +37,7 @@
     <Button
         android:id="@+id/bt_line"
         android:layout_width="240px"
-        android:layout_height="150px"
+        android:layout_height="180px"
         android:text="虚拟墙"
         android:layout_margin="10px"
         app:layout_constraintStart_toEndOf="@+id/bt_rect"
@@ -55,8 +55,8 @@
 
     <Button
         android:id="@+id/bt_dot"
-        android:layout_width="300px"
-        android:layout_height="150px"
+        android:layout_width="280px"
+        android:layout_height="180px"
         android:text="点位"
         android:layout_margin="10px"
         app:layout_constraintStart_toEndOf="@+id/bt_line"
@@ -69,8 +69,8 @@
         android:text="补水点"
         android:layout_margin="10px"
         android:visibility="invisible"
-        app:layout_constraintStart_toEndOf="@+id/bt_line"
-        app:layout_constraintTop_toBottomOf="@+id/bt_rect" />
+        app:layout_constraintStart_toEndOf="@+id/bt_add_line"
+        app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
 
 
     <Button
@@ -81,7 +81,38 @@
         android:layout_margin="10px"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_add_water"
-        app:layout_constraintTop_toBottomOf="@+id/bt_line" />
+        app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
+
+
+    <Button
+        android:id="@+id/bt_draw"
+        android:layout_width="280px"
+        android:layout_height="180px"
+        android:text="橡皮擦"
+        android:layout_margin="10px"
+        app:layout_constraintStart_toEndOf="@+id/bt_dot"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/bt_draw_revoke"
+        android:layout_width="140px"
+        android:layout_height="200px"
+        android:text="撤销"
+        android:layout_margin="10px"
+        android:visibility="invisible"
+        app:layout_constraintStart_toEndOf="@+id/bt_drain"
+        app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
+
+
+    <Button
+        android:id="@+id/bt_draw_reset"
+        android:layout_width="140px"
+        android:layout_height="200px"
+        android:text="重置"
+        android:layout_margin="10px"
+        android:visibility="invisible"
+        app:layout_constraintStart_toEndOf="@+id/bt_draw_revoke"
+        app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
 
 
     <com.lavanidad.qiushui.SketchpadView
@@ -89,6 +120,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="10px"
+        android:layout_marginTop="332dp"
         app:layout_constraintStart_toStartOf="@+id/bt_add_rect"
         app:layout_constraintTop_toBottomOf="@+id/bt_add_rect" />
 

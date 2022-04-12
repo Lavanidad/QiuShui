@@ -18,6 +18,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     Button bt_none, bt_rect, bt_add_rect, bt_line, bt_add_line;
     Button bt_dot, bt_add_water, bt_drain;
+    Button bt_draw, bt_draw_revoke, bt_draw_reset;
     SketchpadView pad;
     SketchpadView1 pad1;
 
@@ -35,7 +36,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         bt_dot = findViewById(R.id.bt_dot);
         bt_add_water = findViewById(R.id.bt_add_water);
         bt_drain = findViewById(R.id.bt_drain);
-
+        bt_draw = findViewById(R.id.bt_draw);
+        bt_draw_revoke = findViewById(R.id.bt_draw_revoke);
+        bt_draw_reset = findViewById(R.id.bt_draw_reset);
 
         //init
         SketchpadData sketchpadData = new SketchpadData();
@@ -51,6 +54,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         bt_dot.setOnClickListener(this);
         bt_add_water.setOnClickListener(this);
         bt_drain.setOnClickListener(this);
+        bt_draw.setOnClickListener(this);
+        bt_draw_revoke.setOnClickListener(this);
+        bt_draw_reset.setOnClickListener(this);
 
     }
 
@@ -62,6 +68,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 bt_add_line.setVisibility(View.INVISIBLE);
                 bt_add_water.setVisibility(View.INVISIBLE);
                 bt_drain.setVisibility(View.INVISIBLE);
+                bt_draw_revoke.setVisibility(View.INVISIBLE);
+                bt_draw_reset.setVisibility(View.INVISIBLE);
 
                 pad.setDrawMode(SketchpadView.DrawMode.TYPE_NONE);
                 pad1.setDrawMode(SketchpadView.DrawMode.TYPE_NONE);
@@ -71,6 +79,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 bt_add_line.setVisibility(View.INVISIBLE);
                 bt_add_water.setVisibility(View.INVISIBLE);
                 bt_drain.setVisibility(View.INVISIBLE);
+                bt_draw_revoke.setVisibility(View.INVISIBLE);
+                bt_draw_reset.setVisibility(View.INVISIBLE);
                 //step1
                 pad.setDrawMode(SketchpadView.DrawMode.TYPE_RECT);
                 pad1.setDrawMode(SketchpadView.DrawMode.TYPE_RECT);
@@ -86,6 +96,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 bt_add_line.setVisibility(View.VISIBLE);
                 bt_add_water.setVisibility(View.INVISIBLE);
                 bt_drain.setVisibility(View.INVISIBLE);
+                bt_draw_revoke.setVisibility(View.INVISIBLE);
+                bt_draw_reset.setVisibility(View.INVISIBLE);
 
                 pad.setDrawMode(SketchpadView.DrawMode.TYPE_LINE);
                 //step1
@@ -101,6 +113,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 bt_add_line.setVisibility(View.INVISIBLE);
                 bt_add_water.setVisibility(View.VISIBLE);
                 bt_drain.setVisibility(View.VISIBLE);
+                bt_draw_revoke.setVisibility(View.INVISIBLE);
+                bt_draw_reset.setVisibility(View.INVISIBLE);
 
                 //先设置成未选中状态，具体操作在下一步进行
                 pad.setDrawMode(SketchpadView.DrawMode.TYPE_NONE);
@@ -119,6 +133,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 Bitmap bitmap3 = BitmapFactory.decodeResource(getResources(), R.mipmap.drain_dot);
                 pad.addDrainDotRecord(bitmap3, 200, 180);
+                break;
+            case R.id.bt_draw:
+                bt_add_rect.setVisibility(View.INVISIBLE);
+                bt_add_line.setVisibility(View.INVISIBLE);
+                bt_add_water.setVisibility(View.INVISIBLE);
+                bt_drain.setVisibility(View.INVISIBLE);
+                bt_draw_revoke.setVisibility(View.VISIBLE);
+                bt_draw_reset.setVisibility(View.VISIBLE);
+
+                pad.setDrawMode(SketchpadView.DrawMode.TYPE_STROKE);
+                break;
+            case R.id.bt_draw_revoke:
+                pad.revoke();
+                break;
+            case R.id.bt_draw_reset:
+                pad.reset();
                 break;
         }
     }

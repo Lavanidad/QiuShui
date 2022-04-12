@@ -10,6 +10,9 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -22,6 +25,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.lavanidad.qiushui.bean.DrainDotRecord;
+import com.lavanidad.qiushui.bean.StrokeRecord;
 import com.lavanidad.qiushui.bean.WaterDotRecord;
 import com.lavanidad.qiushui.bean.LineRecord;
 import com.lavanidad.qiushui.bean.RectRecord;
@@ -90,6 +94,7 @@ public class SketchpadView extends View {
     private LineRecord curLineRecord;//线区域的属性
     private WaterDotRecord curWaterDotRecord;//补水点区域属性
     private DrainDotRecord curDrainDotRecord;//排水点区域属性
+    private StrokeRecord curStrokeRecord;//线属性
 
 
     private int mWidth, mHeight;//？宽高
@@ -105,6 +110,9 @@ public class SketchpadView extends View {
 
     //画笔
     private Paint strokePaint;
+
+    //绘制路径
+    public Path strokePath;
 
     //画矩形边框的画笔
     private Paint rectFramePaint;
@@ -163,6 +171,11 @@ public class SketchpadView extends View {
     private static float SCALE_MIN = 0.2f;
     private static float SCALE_MIN_LEN;
     private Canvas canvas;
+
+    public Bitmap tempBitmap;//临时绘制的bitmap
+    public Canvas tempCanvas;
+    public Bitmap tempHoldBitmap;//保存已固化的笔画bitmap
+    public Canvas tempHoldCanvas;
 
     public SketchpadView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -287,6 +300,29 @@ public class SketchpadView extends View {
                 //绘制确认/取消
                 drawDrainDotButton(canvas, dotCorners);
             }
+            /**
+             * 画笔操作
+             */
+            //新建一个临时画布，以便橡皮擦生效
+            if (tempBitmap == null) {
+                tempBitmap = Bitmap.createBitmap(getWidth() / drawDensity, getHeight() / drawDensity, Bitmap.Config.ARGB_8888);
+                tempCanvas = new Canvas(tempBitmap);
+            }
+            //新建一个临时画布，以便保存过多的画笔
+            if (tempHoldBitmap == null) {
+                tempHoldBitmap = Bitmap.createBitmap(getWidth() / drawDensity, getHeight() / drawDensity, Bitmap.Config.ARGB_8888);
+                tempHoldCanvas = new Canvas(tempHoldBitmap);
+            }
+            //清楚画布
+            clearCanvas(tempCanvas);
+            tempCanvas.drawColor(Color.TRANSPARENT);
+            tempCanvas.drawBitmap(tempHoldBitmap, new Rect(0, 0, tempHoldBitmap.getWidth(), tempHoldBitmap.getHeight()), new Rect(0, 0, tempCanvas.getWidth(), tempCanvas.getHeight()), null);
+            for (StrokeRecord record : curSketchpadData.strokeRecordList) {
+                if (record != null) {
+                    tempCanvas.drawPath(record.path, record.paint);
+                }
+            }
+            canvas.drawBitmap(tempBitmap, new Rect(0, 0, tempCanvas.getWidth(), tempCanvas.getHeight()), new Rect(0, 0, canvas.getWidth(), canvas.getHeight()), null);
         }
     }
 
@@ -649,6 +685,20 @@ public class SketchpadView extends View {
             }
             selectOtherDrainDot(downPoint);
         }
+        //如果是绘制模式
+        if (curSketchpadData.drawMode == DrawMode.TYPE_STROKE) {
+            curStrokeRecord = new StrokeRecord();
+            strokePaint.setAntiAlias(true);//由于降低密度绘制，所以需要抗锯齿
+            strokePaint.setXfermode(null);
+            strokePath = new Path();
+            strokePath.moveTo(downX, downY);
+            curStrokeRecord.path = strokePath;
+            strokePaint.setColor(strokeRealColor);
+            strokePaint.setStrokeWidth(strokeSize);
+            curStrokeRecord.paint = new Paint(strokePaint); // Clones the mPaint object
+            curSketchpadData.strokeRecordList.add(curStrokeRecord);
+        }
+
     }
 
     private void touchMove() {
@@ -686,6 +736,10 @@ public class SketchpadView extends View {
                 //拖动
                 drainDotMove((curX - preX) * drawDensity, (curY - preY) * drawDensity);
             }
+        }
+        //如果是绘制模式
+        if (curSketchpadData.drawMode == DrawMode.TYPE_STROKE) {
+            strokePath.quadTo(preX, preY, (curX + preX) / 2, (curY + preY) / 2);
         }
     }
 
@@ -1132,7 +1186,7 @@ public class SketchpadView extends View {
 
 
     @IntDef({DrawMode.TYPE_NONE, DrawMode.TYPE_RECT, DrawMode.TYPE_WATER_DOT,
-            DrawMode.TYPE_DRAIN_DOT, DrawMode.TYPE_LINE, DrawMode.TYPE_ERASER})
+            DrawMode.TYPE_DRAIN_DOT, DrawMode.TYPE_LINE, DrawMode.TYPE_STROKE})
     @Retention(RetentionPolicy.SOURCE)
     public @interface DrawMode {
 
@@ -1146,7 +1200,7 @@ public class SketchpadView extends View {
 
         int TYPE_DRAIN_DOT = 0x04;//排水点
 
-        int TYPE_ERASER = 0x05;//橡皮擦
+        int TYPE_STROKE = 0x05;//画笔
     }
 
     /**
@@ -1388,6 +1442,18 @@ public class SketchpadView extends View {
         invalidate();
     }
 
+    /**
+     * 清理画布canvas
+     *
+     * @param temptCanvas
+     */
+    public void clearCanvas(Canvas temptCanvas) {
+        Paint p = new Paint();
+        p.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
+        temptCanvas.drawPaint(p);
+        p.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC));
+    }
+
 
     /**
      * 获取放大倍数
@@ -1418,4 +1484,23 @@ public class SketchpadView extends View {
         invalidate();
     }
 
+    /**
+     * 开放方法，撤销
+     */
+    public void revoke() {
+        if (curSketchpadData.strokeRecordList.size() > 0) {
+            curSketchpadData.strokeRecordList.remove(curSketchpadData.strokeRecordList.size() - 1);
+            invalidate();
+        }
+    }
+
+    /**
+     * 画笔:重置画面
+     */
+    public void reset() {
+        if (curSketchpadData.strokeRecordList.size() > 0) {
+            curSketchpadData.strokeRecordList.clear();
+            invalidate();
+        }
+    }
 }

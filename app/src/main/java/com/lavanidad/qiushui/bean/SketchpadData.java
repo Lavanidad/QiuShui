@@ -11,6 +11,7 @@ public class SketchpadData {
     public List<LineRecord> lineRecordList;
     public List<WaterDotRecord> waterDotRecordList;
     public List<DrainDotRecord> drainDotRecordList;
+    public List<StrokeRecord> strokeRecordList;
     public int drawMode;
 
     public SketchpadData() {
@@ -18,6 +19,7 @@ public class SketchpadData {
         lineRecordList = new ArrayList<>();
         waterDotRecordList = new ArrayList<>();
         drainDotRecordList = new ArrayList<>();
+        strokeRecordList = new ArrayList<>();
         drawMode = SketchpadView.DrawMode.TYPE_NONE;
     }
 
