@@ -9,21 +9,16 @@ public class SketchpadData {
 
     public List<RectRecord> rectRecordList;
     public List<LineRecord> lineRecordList;
+    public List<WaterDotRecord> waterDotRecordList;
+    public List<DrainDotRecord> drainDotRecordList;
     public int drawMode;
 
     public SketchpadData() {
         rectRecordList = new ArrayList<>();
         lineRecordList = new ArrayList<>();
+        waterDotRecordList = new ArrayList<>();
+        drainDotRecordList = new ArrayList<>();
         drawMode = SketchpadView.DrawMode.TYPE_NONE;
-    }
-
-
-    public List<RectRecord> getRectRecordList() {
-        return rectRecordList;
-    }
-
-    public void setRectRecordList(List<RectRecord> rectRecordList) {
-        this.rectRecordList = rectRecordList;
     }
 
     public int getDrawMode() {

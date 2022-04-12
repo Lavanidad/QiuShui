@@ -11,7 +11,6 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.RectF;
-import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -22,6 +21,8 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.lavanidad.qiushui.bean.DrainDotRecord;
+import com.lavanidad.qiushui.bean.WaterDotRecord;
 import com.lavanidad.qiushui.bean.LineRecord;
 import com.lavanidad.qiushui.bean.RectRecord;
 import com.lavanidad.qiushui.bean.SketchpadData;
@@ -40,21 +41,35 @@ public class SketchpadView extends View {
     private Bitmap confirmMarkBM = BitmapFactory.decodeResource(getResources(), R.mipmap.round_confirm);
     private Bitmap cancelMarkBM = BitmapFactory.decodeResource(getResources(), R.mipmap.round_cancel);
     private Bitmap dotMarkBM = BitmapFactory.decodeResource(getResources(), R.mipmap.round_dot);
+    private Bitmap smallConfirmMarkBM = BitmapFactory.decodeResource(getResources(), R.mipmap.round_confirm100);
+    private Bitmap smallCancelMarkBM = BitmapFactory.decodeResource(getResources(), R.mipmap.round_cancel100);
 
     /**
-     * 矩形确认,取消,顶点 图标区域
+     * 矩形确认,取消 图标区域
      */
     private RectF rectConfirmMarkRect = new RectF(0, 0, confirmMarkBM.getWidth(), confirmMarkBM.getHeight());
     private RectF rectCancelMarkRect = new RectF(0, 0, cancelMarkBM.getWidth(), cancelMarkBM.getHeight());
 
     /**
-     * 线段确认,取消,顶点 图标区域
+     * 线段确认,取消 图标区域
      */
     private RectF lineConfirmMarkRect = new RectF(0, 0, confirmMarkBM.getWidth(), confirmMarkBM.getHeight());
     private RectF lineCancelMarkRect = new RectF(0, 0, cancelMarkBM.getWidth(), cancelMarkBM.getHeight());
 
     /**
-     * 四个顶点的矩形区域：用于判断是否被选中
+     * 补水点确认,取消 图标区域
+     */
+    private RectF waterDotConfirmMarkRect = new RectF(0, 0, smallConfirmMarkBM.getWidth(), smallConfirmMarkBM.getHeight());
+    private RectF waterDotCancelMarkRect = new RectF(0, 0, smallCancelMarkBM.getWidth(), smallCancelMarkBM.getHeight());
+
+    /**
+     * 排水点确认,取消 图标区域
+     */
+    private RectF drainDotConfirmMarkRect = new RectF(0, 0, smallConfirmMarkBM.getWidth(), smallConfirmMarkBM.getHeight());
+    private RectF drainDotCancelMarkRect = new RectF(0, 0, smallCancelMarkBM.getWidth(), smallCancelMarkBM.getHeight());
+
+    /**
+     * 矩形四个顶点的区域：用于判断是否被选中
      */
     private RectF dotUpperLeftRect = new RectF(0, 0, dotMarkBM.getWidth(), dotMarkBM.getHeight());
     private RectF dotUpperRightRect = new RectF(0, 0, dotMarkBM.getWidth(), dotMarkBM.getHeight());
@@ -67,11 +82,14 @@ public class SketchpadView extends View {
     private RectF dotLeftLineRect = new RectF(0, 0, dotMarkBM.getWidth(), dotMarkBM.getHeight());
     private RectF dotRightLineRect = new RectF(0, 0, dotMarkBM.getWidth(), dotMarkBM.getHeight());
 
+
     private Context context;
 
     private SketchpadData curSketchpadData;//记录画板上的元素
     private RectRecord curRectRecord;//矩形区域的属性
     private LineRecord curLineRecord;//线区域的属性
+    private WaterDotRecord curWaterDotRecord;//补水点区域属性
+    private DrainDotRecord curDrainDotRecord;//排水点区域属性
 
 
     private int mWidth, mHeight;//？宽高
@@ -85,7 +103,6 @@ public class SketchpadView extends View {
 
     private int drawDensity = 2;//绘制密度,数值越高图像质量越低、性能越好
 
-
     //画笔
     private Paint strokePaint;
 
@@ -94,26 +111,49 @@ public class SketchpadView extends View {
 
     //辅助onTouch事件，判断当前选中模式
     private int actionMode;
-    private static final int ACTION_NONE = 0x100;
-    private static final int ACTION_SELECT_RECT_DOT = 0x101;
-    private static final int ACTION_SELECT_RECT_INSIDE = 0x102;
-    private static final int ACTION_SELECT_RECT_CONFIRM = 0x103;
-    private static final int ACTION_SELECT_RECT_CANCEL = 0x104;
-    private static final int ACTION_SELECT_LINE_DOT = 0x105;
-    private static final int ACTION_SELECT_LINE_INSIDE = 0x106;
-    private static final int ACTION_SELECT_LINE_CONFIRM = 0x107;
-    private static final int ACTION_SELECT_LINE_CANCEL = 0x108;
+    private static final int ACTION_NONE = 0x00;
+    /**
+     * 矩形的选中事件
+     */
+    private static final int ACTION_SELECT_RECT_DOT = 0x01;
+    private static final int ACTION_SELECT_RECT_INSIDE = 0x02;
+    private static final int ACTION_SELECT_RECT_CONFIRM = 0x03;
+    private static final int ACTION_SELECT_RECT_CANCEL = 0x04;
+    /**
+     * 线段的选中事件
+     */
+    private static final int ACTION_SELECT_LINE_DOT = 0x05;
+    private static final int ACTION_SELECT_LINE_INSIDE = 0x06;
+    private static final int ACTION_SELECT_LINE_CONFIRM = 0x07;
+    private static final int ACTION_SELECT_LINE_CANCEL = 0x08;
+    /**
+     * 补水点，排水点的选中事件
+     */
+    private static final int ACTION_SELECT_WATERDOT_INSIDE = 0x09;
+    private static final int ACTION_SELECT_WATERDOT_CONFIRM = 0x10;
+    private static final int ACTION_SELECT_WATERDOT_CANCEL = 0x11;
 
+    private static final int ACTION_SELECT_DRAINDOT_INSIDE = 0x12;
+    private static final int ACTION_SELECT_DRAINDOT_CONFIRM = 0x13;
+    private static final int ACTION_SELECT_DRAINDOT_CANCEL = 0x14;
+
+    //细分具体选中了哪
     private int selectedPos;
-    private static final int UpperLeft = 0x200;
-    private static final int UpperRight = 0x201;
-    private static final int LowerRight = 0x202;
-    private static final int LowerLeft = 0x203;
-    private static final int LineLeft = 0x204;
-    private static final int LineRight = 0x205;
+    /**
+     * 矩形的四个顶点
+     */
+    private static final int UPPER_LEFT = 0x200;
+    private static final int UPPER_RIGHT = 0x201;
+    private static final int LOWER_RIGHT = 0x202;
+    private static final int LOWER_LEFT = 0x203;
+    /**
+     * 线的两端
+     */
+    private static final int LINE_LEFT = 0x204;
+    private static final int LINE_RIGHT = 0x205;
 
     /**
-     * 测试数据设置
+     * 测试用数据设置
      */
     private int strokeRealColor = Color.BLACK;//画笔实际颜色
     private int strokeColor = Color.BLACK;//画笔颜色
@@ -142,7 +182,7 @@ public class SketchpadView extends View {
         strokePaint.setStrokeCap(Paint.Cap.ROUND);
         strokePaint.setStrokeWidth(strokeSize);
 
-        //矩形边框画笔
+        //矩形边框画笔 暂时没用到
         rectFramePaint = new Paint();
         rectFramePaint.setColor(Color.GRAY);
         rectFramePaint.setStrokeWidth(2f);
@@ -185,7 +225,6 @@ public class SketchpadView extends View {
      * @param canvas
      */
     private void drawRecord(Canvas canvas) {
-
         if (curSketchpadData != null) {
             //画矩形区域本体:设置的图片
             for (RectRecord record : curSketchpadData.rectRecordList) {
@@ -199,7 +238,20 @@ public class SketchpadView extends View {
                     canvas.drawBitmap(record.bitmap, record.matrix, null);
                 }
             }
-            //画矩形框
+            //画补水点
+            for (WaterDotRecord record : curSketchpadData.waterDotRecordList) {
+                if (record != null) {
+                    canvas.drawBitmap(record.bitmap, record.matrix, null);
+                }
+            }
+            //画排水点
+            for (DrainDotRecord record : curSketchpadData.drainDotRecordList) {
+                if (record != null) {
+                    canvas.drawBitmap(record.bitmap, record.matrix, null);
+                }
+            }
+
+            //如果是矩形模式
             if (curSketchpadData.drawMode == DrawMode.TYPE_RECT && curRectRecord != null) {
                 //放大最大值
                 SCALE_MAX = curRectRecord.scaleMax;
@@ -213,7 +265,7 @@ public class SketchpadView extends View {
                 //绘制确认/取消
                 drawRectButton(canvas, rectCorners);
             }
-            //TODO
+            //如果是线段模式
             if (curSketchpadData.drawMode == DrawMode.TYPE_LINE && curLineRecord != null) {
                 //放大最大值
                 SCALE_MAX = curLineRecord.scaleMax;
@@ -222,6 +274,18 @@ public class SketchpadView extends View {
                 drawLineDot(canvas, lineCorners);
                 //绘制确认/取消
                 drawLineButton(canvas, lineCorners);
+            }
+            //如果是补水点
+            if (curSketchpadData.drawMode == DrawMode.TYPE_WATER_DOT && curWaterDotRecord != null) {
+                float[] dotCorners = calculateWaterDot(curWaterDotRecord);
+                //绘制确认/取消
+                drawWaterDotButton(canvas, dotCorners);
+            }
+            //如果是排水点
+            if (curSketchpadData.drawMode == DrawMode.TYPE_DRAIN_DOT && curDrainDotRecord != null) {
+                float[] dotCorners = calculateDrainDot(curDrainDotRecord);
+                //绘制确认/取消
+                drawDrainDotButton(canvas, dotCorners);
             }
         }
     }
@@ -269,6 +333,42 @@ public class SketchpadView extends View {
         y = lineCorners[3] - dotRightLineRect.height() / 2;
         dotRightLineRect.offsetTo(x, y);
         canvas.drawBitmap(dotMarkBM, x, y, null);
+    }
+
+    /**
+     * 计算排水点需要用到的点位
+     *
+     * @param waterDotRecord
+     * @return
+     */
+    private float[] calculateWaterDot(WaterDotRecord waterDotRecord) {
+        float[] dotCornersSrc = new float[2];
+        float[] dotCorners = new float[2];
+        RectF rectF = waterDotRecord.rectOrigin;
+
+        //0,1代表中点XY
+        dotCornersSrc[0] = rectF.centerX();
+        dotCornersSrc[1] = rectF.centerY();
+        curWaterDotRecord.matrix.mapPoints(dotCorners, dotCornersSrc);
+        return dotCorners;
+    }
+
+    /**
+     * 计算补水点需要用到的点位
+     *
+     * @param drainDotRecord
+     * @return
+     */
+    private float[] calculateDrainDot(DrainDotRecord drainDotRecord) {
+        float[] dotCornersSrc = new float[2];
+        float[] dotCorners = new float[2];
+        RectF rectF = drainDotRecord.rectOrigin;
+
+        //0,1代表中点XY
+        dotCornersSrc[0] = rectF.centerX();
+        dotCornersSrc[1] = rectF.centerY();
+        curDrainDotRecord.matrix.mapPoints(dotCorners, dotCornersSrc);
+        return dotCorners;
     }
 
     /**
@@ -365,15 +465,11 @@ public class SketchpadView extends View {
         float x;
         float y;
 
-//        x = rectCorners[8] + curRectRecord.rectOrigin.width() / 2 + 20;
-//        y = rectCorners[9] - confirmMarkRect.height() / 2;
         x = rectCorners[2] + 20;
         y = rectCorners[9] - rectConfirmMarkRect.height() / 2;
         rectConfirmMarkRect.offsetTo(x, y);
         canvas.drawBitmap(confirmMarkBM, x, y, null);
 
-//        x = rectCorners[8] - curRectRecord.rectOrigin.width() / 2 - cancelMarkRect.width() - 20;
-//        y = rectCorners[9] - cancelMarkRect.height() / 2;
         x = rectCorners[0] - rectCancelMarkRect.width() - 20;
         y = rectCorners[9] - rectCancelMarkRect.height() / 2;
         rectCancelMarkRect.offsetTo(x, y);
@@ -407,6 +503,48 @@ public class SketchpadView extends View {
 
     }
 
+    /**
+     * TODO 绘制排水点确认/取消 需要一个兼容性更好的计算方式
+     *
+     * @param canvas
+     * @param dotCorners
+     */
+    private void drawWaterDotButton(Canvas canvas, float[] dotCorners) {
+        float x;
+        float y;
+
+        x = dotCorners[0] + curWaterDotRecord.rectOrigin.width() / 2;
+        y = dotCorners[1] - waterDotConfirmMarkRect.height() / 2 - 15;
+        waterDotConfirmMarkRect.offsetTo(x, y);
+        canvas.drawBitmap(smallConfirmMarkBM, x, y, null);
+
+        x = dotCorners[0] - curWaterDotRecord.rectOrigin.width() + 25;
+        y = dotCorners[1] - waterDotConfirmMarkRect.height() / 2 - 15;
+        waterDotCancelMarkRect.offsetTo(x, y);
+        canvas.drawBitmap(smallCancelMarkBM, x, y, null);
+    }
+
+    /**
+     * TODO 绘制排水点确认/取消 需要一个兼容性更好的计算方式
+     *
+     * @param canvas
+     * @param dotCorners
+     */
+    private void drawDrainDotButton(Canvas canvas, float[] dotCorners) {
+        float x;
+        float y;
+
+        x = dotCorners[0] + curDrainDotRecord.rectOrigin.width() / 2;
+        y = dotCorners[1] - drainDotConfirmMarkRect.height() / 2 - 15;
+        drainDotConfirmMarkRect.offsetTo(x, y);
+        canvas.drawBitmap(smallConfirmMarkBM, x, y, null);
+
+        x = dotCorners[0] - curDrainDotRecord.rectOrigin.width() + 25;
+        y = dotCorners[1] - drainDotCancelMarkRect.height() / 2 - 15;
+        drainDotCancelMarkRect.offsetTo(x, y);
+        canvas.drawBitmap(smallCancelMarkBM, x, y, null);
+    }
+
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -426,7 +564,7 @@ public class SketchpadView extends View {
                 invalidate();
                 break;
             case MotionEvent.ACTION_UP:
-                touchUp();
+                //touchUp();
                 invalidate();
                 break;
             case MotionEvent.ACTION_POINTER_DOWN:
@@ -481,6 +619,36 @@ public class SketchpadView extends View {
             }
             selectOtherLine(downPoint);
         }
+        //如果当前是补水点
+        if (curSketchpadData.drawMode == DrawMode.TYPE_WATER_DOT) {
+            //触摸点
+            float[] downPoint = new float[]{downX * drawDensity, downY * drawDensity};
+            //如果触摸内部区域
+            if (isInWaterDot(curWaterDotRecord, downPoint)) {
+                actionMode = ACTION_SELECT_WATERDOT_INSIDE;
+                return;
+            }
+            //判断是否点击了确认/取消区域
+            if (isInWaterDotButtonRect(downPoint)) {
+                return;
+            }
+            selectOtherWaterDot(downPoint);
+        }
+        //如果是排水点
+        if (curSketchpadData.drawMode == DrawMode.TYPE_DRAIN_DOT) {
+            //触摸点
+            float[] downPoint = new float[]{downX * drawDensity, downY * drawDensity};
+            //如果触摸内部区域
+            if (isInDrainDot(curDrainDotRecord, downPoint)) {
+                actionMode = ACTION_SELECT_DRAINDOT_INSIDE;
+                return;
+            }
+            //判断是否点击了确认/取消区域
+            if (isInDrainDotButtonRect(downPoint)) {
+                return;
+            }
+            selectOtherDrainDot(downPoint);
+        }
     }
 
     private void touchMove() {
@@ -494,7 +662,7 @@ public class SketchpadView extends View {
                 rectMove((curX - preX) * drawDensity, (curY - preY) * drawDensity);
             }
         }
-        //如果是线段
+        //如果是线段 TODO 拉长需要增加功能
         if (curSketchpadData.drawMode == DrawMode.TYPE_LINE && curLineRecord != null) {
             if (actionMode == ACTION_SELECT_LINE_DOT) {
                 //拉长缩短+旋转
@@ -505,12 +673,29 @@ public class SketchpadView extends View {
                 lineMove((curX - preX) * drawDensity, (curY - preY) * drawDensity);
             }
         }
+        //如果是补水点
+        if (curSketchpadData.drawMode == DrawMode.TYPE_WATER_DOT && curWaterDotRecord != null) {
+            if (actionMode == ACTION_SELECT_WATERDOT_INSIDE) {
+                //拖动
+                waterDotMove((curX - preX) * drawDensity, (curY - preY) * drawDensity);
+            }
+        }
+        //如果是排水点
+        if (curSketchpadData.drawMode == DrawMode.TYPE_DRAIN_DOT && curDrainDotRecord != null) {
+            if (actionMode == ACTION_SELECT_DRAINDOT_INSIDE) {
+                //拖动
+                drainDotMove((curX - preX) * drawDensity, (curY - preY) * drawDensity);
+            }
+        }
     }
 
-    private void touchUp() {
-
-    }
-
+    /**
+     * 线段端点的移动和旋转
+     *
+     * @param lineRecord
+     * @param x
+     * @param y
+     */
     private void lineMoveAndRotate(LineRecord lineRecord, float x, float y) {
         float[] corners = calculateLine(lineRecord);
 
@@ -535,7 +720,7 @@ public class SketchpadView extends View {
         float yscale;
 
         switch (selectedPos) {
-            case LineLeft:
+            case LINE_LEFT:
                 //旋转
                 preVector.set((preX * drawDensity - corners[2]), preY * drawDensity - corners[3]);//旋转后向量
                 curVector.set(curX * drawDensity - corners[2], curY * drawDensity - corners[3]);//旋转前向量
@@ -559,7 +744,7 @@ public class SketchpadView extends View {
                 }
                 lineRecord.matrix.postRotate((float) dAngle, corners[2], corners[3]);
                 break;
-            case LineRight:
+            case LINE_RIGHT:
                 preVector.set((preX * drawDensity - corners[0]), preY * drawDensity - corners[1]);//旋转后向量
                 curVector.set(curX * drawDensity - corners[0], curY * drawDensity - corners[1]);//旋转前向量
                 preVectorLen = getVectorLength(preVector);
@@ -608,7 +793,7 @@ public class SketchpadView extends View {
         float[] corners = calculateCorners(rectRecord);
         //rectRecord.rectOrigin.set(0, 0, newX, newY);
         switch (selectedPos) {
-            case UpperLeft:
+            case UPPER_LEFT:
                 newX = rectRecord.rectOrigin.width() - x;
                 newY = rectRecord.rectOrigin.height() - y;
                 xscale = newX / rectRecord.rectOrigin.width();
@@ -616,7 +801,7 @@ public class SketchpadView extends View {
                 rectRecord.matrix.postScale(xscale, yscale, corners[4], corners[5]);
                 Log.e("tag", "test:" + rectRecord.rectOrigin.width() + ",height:" + rectRecord.rectOrigin.height());
                 break;
-            case UpperRight:
+            case UPPER_RIGHT:
                 newX = rectRecord.rectOrigin.width() + x;
                 newY = rectRecord.rectOrigin.height() - y;
                 xscale = newX / rectRecord.rectOrigin.width();
@@ -626,14 +811,14 @@ public class SketchpadView extends View {
                 //rectRecord.rectOrigin.set(rectRecord.rectOrigin.left, rectRecord.rectOrigin.top, rectRecord.rectOrigin.right * xscale, rectRecord.rectOrigin.bottom);
                 Log.e("tag", "test:" + rectRecord.rectOrigin.width() + ",height:" + rectRecord.rectOrigin.height());
                 break;
-            case LowerLeft:
+            case LOWER_LEFT:
                 newX = rectRecord.rectOrigin.width() - x;
                 newY = rectRecord.rectOrigin.height() + y;
                 xscale = newX / rectRecord.rectOrigin.width();
                 yscale = newY / rectRecord.rectOrigin.height();
                 rectRecord.matrix.postScale(xscale, yscale, corners[2], corners[3]);
                 break;
-            case LowerRight:
+            case LOWER_RIGHT:
                 newX = rectRecord.rectOrigin.width() + x;
                 newY = rectRecord.rectOrigin.height() + y;
                 xscale = newX / rectRecord.rectOrigin.width();
@@ -672,19 +857,19 @@ public class SketchpadView extends View {
         //如果选中了顶点，
         if (dotUpperLeftRect.contains(downPoint[0], downPoint[1])) {
             actionMode = ACTION_SELECT_RECT_DOT;
-            selectedPos = UpperLeft;
+            selectedPos = UPPER_LEFT;
             return true;
         } else if (dotUpperRightRect.contains(downPoint[0], downPoint[1])) {
             actionMode = ACTION_SELECT_RECT_DOT;
-            selectedPos = UpperRight;
+            selectedPos = UPPER_RIGHT;
             return true;
         } else if (dotLowerLeftRect.contains(downPoint[0], downPoint[1])) {
             actionMode = ACTION_SELECT_RECT_DOT;
-            selectedPos = LowerLeft;
+            selectedPos = LOWER_LEFT;
             return true;
         } else if (dotLowerRightRect.contains(downPoint[0], downPoint[1])) {
             actionMode = ACTION_SELECT_RECT_DOT;
-            selectedPos = LowerRight;
+            selectedPos = LOWER_RIGHT;
             return true;
         }
         selectedPos = -1;
@@ -718,11 +903,11 @@ public class SketchpadView extends View {
     private boolean isInLineDot(float[] downPoint) {
         if (dotLeftLineRect.contains(downPoint[0], downPoint[1])) {
             actionMode = ACTION_SELECT_LINE_DOT;
-            selectedPos = LineLeft;
+            selectedPos = LINE_LEFT;
             return true;
         } else if (dotRightLineRect.contains(downPoint[0], downPoint[1])) {
             actionMode = ACTION_SELECT_LINE_DOT;
-            selectedPos = LineRight;
+            selectedPos = LINE_RIGHT;
             return true;
         }
         selectedPos = -1;
@@ -747,6 +932,62 @@ public class SketchpadView extends View {
             return lineRecord.lineOrigin.contains(invertPoint[0], invertPoint[1]);
         }
         return false;
+    }
+
+    /**
+     * 是否触摸到点内部
+     *
+     * @param waterDotRecord
+     * @param downPoint
+     * @return
+     */
+    private boolean isInWaterDot(WaterDotRecord waterDotRecord, float[] downPoint) {
+        if (waterDotRecord != null) {
+            float[] invertPoint = new float[2];
+            Matrix invertMatrix = new Matrix();
+            waterDotRecord.matrix.invert(invertMatrix);
+            invertMatrix.mapPoints(invertPoint, downPoint);
+            return waterDotRecord.rectOrigin.contains(invertPoint[0], invertPoint[1]);
+        }
+        return false;
+    }
+
+    /**
+     * 是否触摸到排水点内部
+     *
+     * @param drainDotRecord
+     * @param downPoint
+     * @return
+     */
+    private boolean isInDrainDot(DrainDotRecord drainDotRecord, float[] downPoint) {
+        if (drainDotRecord != null) {
+            float[] invertPoint = new float[2];
+            Matrix invertMatrix = new Matrix();
+            drainDotRecord.matrix.invert(invertMatrix);
+            invertMatrix.mapPoints(invertPoint, downPoint);
+            return drainDotRecord.rectOrigin.contains(invertPoint[0], invertPoint[1]);
+        }
+        return false;
+    }
+
+    /**
+     * 补水点整体移动
+     *
+     * @param distanceX
+     * @param distanceY
+     */
+    private void waterDotMove(float distanceX, float distanceY) {
+        curWaterDotRecord.matrix.postTranslate((int) distanceX, (int) distanceY);
+    }
+
+    /**
+     * 补水点整体移动
+     *
+     * @param distanceX
+     * @param distanceY
+     */
+    private void drainDotMove(float distanceX, float distanceY) {
+        curDrainDotRecord.matrix.postTranslate((int) distanceX, (int) distanceY);
     }
 
 
@@ -788,6 +1029,39 @@ public class SketchpadView extends View {
         return false;
     }
 
+    private boolean isInWaterDotButtonRect(float[] downPoint) {
+        if (waterDotConfirmMarkRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_WATERDOT_CONFIRM;
+            Toast.makeText(context, "确认顶点，调用JS方法", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+        if (waterDotCancelMarkRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_WATERDOT_CANCEL;
+            curSketchpadData.waterDotRecordList.remove(curWaterDotRecord);
+            setWaterDotRecord(null);//TODO addNull可能会导致的问题
+            actionMode = ACTION_NONE;
+            return true;
+        }
+        return false;
+    }
+
+
+    private boolean isInDrainDotButtonRect(float[] downPoint) {
+        if (drainDotConfirmMarkRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_DRAINDOT_CONFIRM;
+            Toast.makeText(context, "确认顶点，调用JS方法", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+        if (drainDotCancelMarkRect.contains(downPoint[0], downPoint[1])) {
+            actionMode = ACTION_SELECT_DRAINDOT_CANCEL;
+            curSketchpadData.drainDotRecordList.remove(curDrainDotRecord);
+            setDrainDotRecord(null);//TODO addNull可能会导致的问题
+            actionMode = ACTION_NONE;
+            return true;
+        }
+        return false;
+    }
+
     private void selectOtherRect(float[] downPoint) {
         RectRecord clickRecord = null;
         for (int i = curSketchpadData.rectRecordList.size() - 1; i >= 0; i--) {
@@ -822,9 +1096,43 @@ public class SketchpadView extends View {
         }
     }
 
+    private void selectOtherWaterDot(float[] downPoint) {
+        WaterDotRecord clickRecord = null;
+        for (int i = curSketchpadData.waterDotRecordList.size() - 1; i >= 0; i--) {
+            WaterDotRecord record = curSketchpadData.waterDotRecordList.get(i);
+            if (isInWaterDot(record, downPoint)) {
+                clickRecord = record;
+                break;
+            }
+        }
+        if (clickRecord != null) {
+            setWaterDotRecord(clickRecord);
+            actionMode = ACTION_SELECT_WATERDOT_INSIDE;
+        } else {
+            actionMode = ACTION_NONE;
+        }
+    }
 
-    @IntDef({DrawMode.TYPE_NONE, DrawMode.TYPE_RECT,
-            DrawMode.TYPE_LINE, DrawMode.TYPE_ERASER})
+    private void selectOtherDrainDot(float[] downPoint) {
+        DrainDotRecord clickRecord = null;
+        for (int i = curSketchpadData.drainDotRecordList.size() - 1; i >= 0; i--) {
+            DrainDotRecord record = curSketchpadData.drainDotRecordList.get(i);
+            if (isInDrainDot(record, downPoint)) {
+                clickRecord = record;
+                break;
+            }
+        }
+        if (clickRecord != null) {
+            setDrainDotRecord(clickRecord);
+            actionMode = ACTION_SELECT_DRAINDOT_INSIDE;
+        } else {
+            actionMode = ACTION_NONE;
+        }
+    }
+
+
+    @IntDef({DrawMode.TYPE_NONE, DrawMode.TYPE_RECT, DrawMode.TYPE_WATER_DOT,
+            DrawMode.TYPE_DRAIN_DOT, DrawMode.TYPE_LINE, DrawMode.TYPE_ERASER})
     @Retention(RetentionPolicy.SOURCE)
     public @interface DrawMode {
 
@@ -834,7 +1142,11 @@ public class SketchpadView extends View {
 
         int TYPE_LINE = 0x02;//绘制线
 
-        int TYPE_ERASER = 0x03;//橡皮擦
+        int TYPE_WATER_DOT = 0x03;//补水点
+
+        int TYPE_DRAIN_DOT = 0x04;//排水点
+
+        int TYPE_ERASER = 0x05;//橡皮擦
     }
 
     /**
@@ -846,6 +1158,8 @@ public class SketchpadView extends View {
         this.curSketchpadData = sketchpadData;
         curRectRecord = null;
         curLineRecord = null;
+        curWaterDotRecord = null;
+        curDrainDotRecord = null;
     }
 
     /**
@@ -862,7 +1176,7 @@ public class SketchpadView extends View {
             RectRecord rectRecord = initRectRecord(setBitmapWH(bitmap, width, height));
             setRectRecord(rectRecord);
         } else {
-            Toast.makeText(context, "bitmap can not be null", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "rect bitmap can not be null", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -873,12 +1187,47 @@ public class SketchpadView extends View {
      */
     public void addLineRecord(Bitmap bitmap, int length) {
         if (bitmap != null) {
+            if (length < 300) {
+                Toast.makeText(context, "长度设置请大于300", Toast.LENGTH_SHORT).show();
+                return;
+            }
             LineRecord lineRecord = initLineRecord(setBitmapWH(bitmap, length, 8), length);
             setLineRecord(lineRecord);
         } else {
-            Toast.makeText(context, "bitmap can not be null", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "line bitmap can not be null", Toast.LENGTH_SHORT).show();
         }
     }
+
+
+    /**
+     * 添加补水点
+     *
+     * @param bitmap
+     * @param width
+     * @param height
+     */
+    public void addWaterDotRecord(Bitmap bitmap, int width, int height) {
+        if (bitmap != null) {
+//            if (length < 300) {
+//                Toast.makeText(context, "长度设置请大于300", Toast.LENGTH_SHORT).show();
+//                return;
+//            }
+            WaterDotRecord waterDotRecord = initWaterDotRecord(setBitmapWH(bitmap, width, height));
+            setWaterDotRecord(waterDotRecord);
+        } else {
+            Toast.makeText(context, "water dot bitmap can not be null", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void addDrainDotRecord(Bitmap bitmap, int width, int height) {
+        if (bitmap != null) {
+            DrainDotRecord drainDotRecord = initDrainDotRecord(setBitmapWH(bitmap, width, height));
+            setDrainDotRecord(drainDotRecord);
+        } else {
+            Toast.makeText(context, "drain dot bitmap can not be null", Toast.LENGTH_SHORT).show();
+        }
+    }
+
 
     /**
      * 设置最后绘制出的bitmap的宽高
@@ -945,14 +1294,49 @@ public class SketchpadView extends View {
     }
 
     /**
-     * 获取放大倍数
+     * 补水点基础数据
      *
-     * @param rectF
+     * @param bitmap
      * @return
      */
-    private float getMaxScale(RectF rectF) {
-        return Math.max(getWidth(), getHeight()) / Math.max(rectF.width(), rectF.height());
+    @NonNull
+    private WaterDotRecord initWaterDotRecord(Bitmap bitmap) {
+        WaterDotRecord waterDotRecord = new WaterDotRecord();
+        waterDotRecord.bitmap = bitmap;
+        waterDotRecord.rectOrigin = new RectF(0, 0, waterDotRecord.bitmap.getWidth(), waterDotRecord.bitmap.getHeight());
+        // lineRecord.scaleMax = getMaxScale(lineRecord.lineOrigin);
+        if (curSketchpadData.waterDotRecordList.size() > 0 && curWaterDotRecord != null) {//有多个图片
+            waterDotRecord.matrix = new Matrix(curWaterDotRecord.matrix);
+            waterDotRecord.matrix.postTranslate(100, 100);//单位PX
+        } else {
+            waterDotRecord.matrix = new Matrix();
+            waterDotRecord.matrix.postTranslate(getWidth() / 3 - bitmap.getWidth(), getHeight() / 3 - bitmap.getHeight());
+        }
+        return waterDotRecord;
     }
+
+    /**
+     * 排水点基础数据
+     *
+     * @param bitmap
+     * @return
+     */
+    @NonNull
+    private DrainDotRecord initDrainDotRecord(Bitmap bitmap) {
+        DrainDotRecord drainDotRecord = new DrainDotRecord();
+        drainDotRecord.bitmap = bitmap;
+        drainDotRecord.rectOrigin = new RectF(0, 0, drainDotRecord.bitmap.getWidth(), drainDotRecord.bitmap.getHeight());
+        // lineRecord.scaleMax = getMaxScale(lineRecord.lineOrigin);
+        if (curSketchpadData.drainDotRecordList.size() > 0 && curDrainDotRecord != null) {//有多个图片
+            drainDotRecord.matrix = new Matrix(curDrainDotRecord.matrix);
+            drainDotRecord.matrix.postTranslate(100, 100);//单位PX
+        } else {
+            drainDotRecord.matrix = new Matrix();
+            drainDotRecord.matrix.postTranslate(getWidth() / 3 + bitmap.getWidth(), getHeight() / 3 + bitmap.getHeight());
+        }
+        return drainDotRecord;
+    }
+
 
     /**
      * 设置矩形区域，数据已暂存给 curRectRecord，下一步来绘制
@@ -974,11 +1358,46 @@ public class SketchpadView extends View {
      */
     private void setLineRecord(LineRecord lineRecord) {
         curSketchpadData.lineRecordList.remove(lineRecord);
-        curSketchpadData.lineRecordList.add(lineRecord);
+        curSketchpadData.lineRecordList.add(lineRecord);//TODO 是否是问题存疑：当add(null)的时候，list.size=1 但是对象不存在
         curLineRecord = lineRecord;
         invalidate();
     }
 
+
+    /**
+     * 设置补水点区域，数据已暂存给 curWaterDotRecord，下一步来绘制
+     *
+     * @param waterDotRecord
+     */
+    private void setWaterDotRecord(WaterDotRecord waterDotRecord) {
+        curSketchpadData.waterDotRecordList.remove(waterDotRecord);
+        curSketchpadData.waterDotRecordList.add(waterDotRecord);//TODO 是否是问题存疑：当add(null)的时候，list.size=1 但是对象不存在
+        curWaterDotRecord = waterDotRecord;
+        invalidate();
+    }
+
+    /**
+     * 设置排水点区域，数据已暂存给 curDrainDotRecord，下一步来绘制
+     *
+     * @param drainDotRecord
+     */
+    private void setDrainDotRecord(DrainDotRecord drainDotRecord) {
+        curSketchpadData.drainDotRecordList.remove(drainDotRecord);
+        curSketchpadData.drainDotRecordList.add(drainDotRecord);//TODO 是否是问题存疑：当add(null)的时候，list.size=1 但是对象不存在
+        curDrainDotRecord = drainDotRecord;
+        invalidate();
+    }
+
+
+    /**
+     * 获取放大倍数
+     *
+     * @param rectF
+     * @return
+     */
+    private float getMaxScale(RectF rectF) {
+        return Math.max(getWidth(), getHeight()) / Math.max(rectF.width(), rectF.height());
+    }
 
     /**
      * 获取当前绘画模式
@@ -998,4 +1417,5 @@ public class SketchpadView extends View {
         this.curSketchpadData.drawMode = drawMode;
         invalidate();
     }
+
 }
