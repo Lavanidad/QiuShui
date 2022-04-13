@@ -1,5 +1,7 @@
 package com.lavanidad.qiushui.bean;
 
+import android.graphics.Bitmap;
+
 import com.lavanidad.qiushui.SketchpadView;
 
 import java.util.ArrayList;
@@ -12,6 +14,7 @@ public class SketchpadData {
     public List<WaterDotRecord> waterDotRecordList;
     public List<DrainDotRecord> drainDotRecordList;
     public List<StrokeRecord> strokeRecordList;
+    public BackgroundRecord backgroundRecord;
     public int drawMode;
 
     public SketchpadData() {
@@ -20,14 +23,7 @@ public class SketchpadData {
         waterDotRecordList = new ArrayList<>();
         drainDotRecordList = new ArrayList<>();
         strokeRecordList = new ArrayList<>();
+        backgroundRecord = null;
         drawMode = SketchpadView.DrawMode.TYPE_NONE;
-    }
-
-    public int getDrawMode() {
-        return drawMode;
-    }
-
-    public void setDrawMode(int drawMode) {
-        this.drawMode = drawMode;
     }
 }

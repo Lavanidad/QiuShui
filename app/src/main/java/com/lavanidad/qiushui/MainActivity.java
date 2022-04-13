@@ -58,6 +58,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         bt_draw_revoke.setOnClickListener(this);
         bt_draw_reset.setOnClickListener(this);
 
+        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.map);
+        pad.setBackgroundBitmap(bitmap, 1200, 1200);
+
     }
 
     @Override

@@ -4,70 +4,78 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#f5f5f5"
     tools:context=".MainActivity">
 
     <Button
         android:id="@+id/bt_none"
-        android:layout_width="200px"
-        android:layout_height="180px"
+        android:layout_width="150px"
+        android:layout_height="100px"
         android:layout_margin="10px"
         android:text="取消"
+        android:textSize="20px"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/bt_rect"
-        android:layout_width="240px"
-        android:layout_height="180px"
-        android:text="禁行区"
+        android:layout_width="150px"
+        android:layout_height="100px"
         android:layout_margin="10px"
+        android:text="禁行区"
+        android:textSize="20px"
         app:layout_constraintStart_toEndOf="@+id/bt_none"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/bt_add_rect"
-        android:layout_width="240px"
-        android:layout_height="180px"
-        android:text="添加禁行区"
+        android:layout_width="150px"
+        android:layout_height="100px"
         android:layout_margin="10px"
+        android:textSize="20px"
+        android:text="添加禁行区"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_none"
         app:layout_constraintTop_toBottomOf="@+id/bt_rect" />
 
     <Button
         android:id="@+id/bt_line"
-        android:layout_width="240px"
-        android:layout_height="180px"
-        android:text="虚拟墙"
+        android:layout_width="150px"
+        android:layout_height="100px"
         android:layout_margin="10px"
+        android:textSize="20px"
+        android:text="虚拟墙"
         app:layout_constraintStart_toEndOf="@+id/bt_rect"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/bt_add_line"
-        android:layout_width="240px"
-        android:layout_height="200px"
-        android:text="添加虚拟墙"
+        android:layout_width="150px"
+        android:layout_height="100px"
         android:layout_margin="10px"
+        android:textSize="20px"
+        android:text="添加虚拟墙"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_rect"
         app:layout_constraintTop_toBottomOf="@+id/bt_rect" />
 
     <Button
         android:id="@+id/bt_dot"
-        android:layout_width="280px"
-        android:layout_height="180px"
-        android:text="点位"
+        android:layout_width="150px"
+        android:layout_height="100px"
         android:layout_margin="10px"
+        android:textSize="20px"
+        android:text="点位"
         app:layout_constraintStart_toEndOf="@+id/bt_line"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/bt_add_water"
-        android:layout_width="140px"
-        android:layout_height="200px"
-        android:text="补水点"
+        android:layout_width="70px"
+        android:layout_height="100px"
         android:layout_margin="10px"
+        android:textSize="20px"
+        android:text="补水点"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_add_line"
         app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
@@ -75,10 +83,11 @@
 
     <Button
         android:id="@+id/bt_drain"
-        android:layout_width="140px"
-        android:layout_height="200px"
-        android:text="排水点"
+        android:layout_width="70px"
+        android:layout_height="100px"
         android:layout_margin="10px"
+        android:textSize="20px"
+        android:text="排水点"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_add_water"
         app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
@@ -86,19 +95,21 @@
 
     <Button
         android:id="@+id/bt_draw"
-        android:layout_width="280px"
-        android:layout_height="180px"
-        android:text="橡皮擦"
+        android:layout_width="150px"
+        android:layout_height="100px"
         android:layout_margin="10px"
+        android:textSize="20px"
+        android:text="橡皮擦"
         app:layout_constraintStart_toEndOf="@+id/bt_dot"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/bt_draw_revoke"
-        android:layout_width="140px"
-        android:layout_height="200px"
-        android:text="撤销"
+        android:layout_width="70px"
+        android:layout_height="100px"
         android:layout_margin="10px"
+        android:textSize="20px"
+        android:text="撤销"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_drain"
         app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
@@ -106,21 +117,23 @@
 
     <Button
         android:id="@+id/bt_draw_reset"
-        android:layout_width="140px"
-        android:layout_height="200px"
-        android:text="重置"
+        android:layout_width="70px"
+        android:layout_height="100px"
         android:layout_margin="10px"
+        android:textSize="20px"
+        android:text="重置"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_draw_revoke"
         app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
 
 
+
     <com.lavanidad.qiushui.SketchpadView
         android:id="@+id/pad"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_width="1200px"
+        android:layout_height="1200px"
         android:layout_margin="10px"
-        android:layout_marginTop="332dp"
+        android:background="@color/white"
         app:layout_constraintStart_toStartOf="@+id/bt_add_rect"
         app:layout_constraintTop_toBottomOf="@+id/bt_add_rect" />
 
@@ -132,7 +145,6 @@
         android:visibility="gone"
         app:layout_constraintStart_toStartOf="@+id/bt_add_rect"
         app:layout_constraintTop_toBottomOf="@+id/bt_add_rect" />
-
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

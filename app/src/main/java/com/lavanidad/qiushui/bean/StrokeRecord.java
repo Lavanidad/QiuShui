@@ -1,5 +1,6 @@
 package com.lavanidad.qiushui.bean;
 
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
@@ -16,6 +17,7 @@ public class StrokeRecord {
     public Paint paint;//笔类
     public Path path;//画笔路径数据
     public PointF[] linePoints; //线数据
+   // public Matrix matrix;
 
     public StrokeRecord() {
     }
@@ -23,8 +25,8 @@ public class StrokeRecord {
     @Override
     public String toString() {
         return "StrokeRecord{" +
-                "paint=" + paint +
-                ", path=" + path +
+                "paint=" + paint.toString() +
+                ", path=" + path.toString() +
                 ", linePoints=" + Arrays.toString(linePoints) +
                 '}';
     }

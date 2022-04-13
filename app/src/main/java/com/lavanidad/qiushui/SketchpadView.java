@@ -17,6 +17,7 @@ import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.Toast;
 
@@ -24,6 +25,7 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.lavanidad.qiushui.bean.BackgroundRecord;
 import com.lavanidad.qiushui.bean.DrainDotRecord;
 import com.lavanidad.qiushui.bean.StrokeRecord;
 import com.lavanidad.qiushui.bean.WaterDotRecord;
@@ -95,6 +97,7 @@ public class SketchpadView extends View {
     private WaterDotRecord curWaterDotRecord;//补水点区域属性
     private DrainDotRecord curDrainDotRecord;//排水点区域属性
     private StrokeRecord curStrokeRecord;//线属性
+    private BackgroundRecord curBackgroundRecord;//背景图属性
 
 
     private int mWidth, mHeight;//？宽高
@@ -145,6 +148,8 @@ public class SketchpadView extends View {
     private static final int ACTION_SELECT_DRAINDOT_CONFIRM = 0x13;
     private static final int ACTION_SELECT_DRAINDOT_CANCEL = 0x14;
 
+    private static final int ACTION_SELECT_BACKGROUND_SCALE = 0x15;
+
     //细分具体选中了哪
     private int selectedPos;
     /**
@@ -160,17 +165,17 @@ public class SketchpadView extends View {
     private static final int LINE_LEFT = 0x204;
     private static final int LINE_RIGHT = 0x205;
 
+    private ScaleGestureDetector mScaleGestureDetector = null;
+
     /**
      * 测试用数据设置
      */
-    private int strokeRealColor = Color.BLACK;//画笔实际颜色
-    private int strokeColor = Color.BLACK;//画笔颜色
-    private int strokeAlpha = 255;//画笔透明度
-    private float strokeSize = 13.0f;
+    private int strokeRealColor = Color.RED;//画笔实际颜色
+    private float strokeSize = 8.0f;
     private static float SCALE_MAX = 4.0f;
     private static float SCALE_MIN = 0.2f;
     private static float SCALE_MIN_LEN;
-    private Canvas canvas;
+    Matrix matrixStroke;
 
     public Bitmap tempBitmap;//临时绘制的bitmap
     public Canvas tempCanvas;
@@ -200,6 +205,28 @@ public class SketchpadView extends View {
         rectFramePaint.setColor(Color.GRAY);
         rectFramePaint.setStrokeWidth(2f);
         rectFramePaint.setStyle(Paint.Style.STROKE);
+
+        mScaleGestureDetector = new ScaleGestureDetector(context, new ScaleGestureDetector.OnScaleGestureListener() {
+            @Override
+            public boolean onScale(ScaleGestureDetector detector) {
+                onScaleAction(detector);
+                return true;
+            }
+
+            @Override
+            public boolean onScaleBegin(ScaleGestureDetector detector) {
+                Log.e("detector", "" + detector.getScaleFactor());
+                return true;
+            }
+
+            @Override
+            public void onScaleEnd(ScaleGestureDetector detector) {
+                Log.e("detector", "end:" + detector.getScaleFactor());
+            }
+        });
+
+        //TODO
+        matrixStroke = new Matrix();
     }
 
     @Override
@@ -211,8 +238,7 @@ public class SketchpadView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        canvas = canvas;
-        //drawBackground(canvas);
+        drawBackground(canvas);
         drawRecord(canvas);
         //X:671 Y:917
         Log.e("test", TAG);
@@ -224,12 +250,16 @@ public class SketchpadView extends View {
     }
 
     public void drawBackground(Canvas canvas) {
-//            Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.test);
+        if (curSketchpadData.backgroundRecord != null && curBackgroundRecord != null) {
 //            Matrix matrix = new Matrix();
-//            float wScale = (float) canvas.getWidth() / bitmap.getWidth();
-//            float hScale = (float) canvas.getHeight() / bitmap.getHeight();
-//            matrix.postScale(wScale, hScale);
-//            canvas.drawBitmap(bitmap, matrix, null);
+//            float wScale = (float) canvas.getWidth() / curSketchpadData.backgroundBitmap.getWidth();
+//            float hScale = (float) canvas.getHeight() / curSketchpadData.backgroundBitmap.getHeight();
+//            //matrix.postScale(wScale, hScale);
+//
+//            matrix.postTranslate(canvas.getWidth() / 2 - curSketchpadData.backgroundBitmap.getWidth() / 2, canvas.getHeight() / 2 - curSketchpadData.backgroundBitmap.getHeight() / 2);
+//            canvas.drawBitmap(curSketchpadData.backgroundBitmap, matrix, null);
+            canvas.drawBitmap(curBackgroundRecord.bitmap, curBackgroundRecord.matrix, null);
+        }
     }
 
     /**
@@ -320,9 +350,13 @@ public class SketchpadView extends View {
             for (StrokeRecord record : curSketchpadData.strokeRecordList) {
                 if (record != null) {
                     tempCanvas.drawPath(record.path, record.paint);
+                    Log.e("path", ":" + record.toString());
                 }
             }
             canvas.drawBitmap(tempBitmap, new Rect(0, 0, tempCanvas.getWidth(), tempCanvas.getHeight()), new Rect(0, 0, canvas.getWidth(), canvas.getHeight()), null);
+
+            matrixStroke.postTranslate(tempCanvas.getWidth(), tempCanvas.getHeight());
+            //   canvas.drawBitmap(tempBitmap, matrixStroke, null);
         }
     }
 
@@ -581,6 +615,11 @@ public class SketchpadView extends View {
         canvas.drawBitmap(smallCancelMarkBM, x, y, null);
     }
 
+    //TODO
+    private final int DOUBLE_TAP_TIMEOUT = 200;
+    private MotionEvent mCurrentDownEvent;
+    private boolean mDoubleTapEnabled = false;
+    private MotionEvent mPreviousUpEvent;
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -593,18 +632,33 @@ public class SketchpadView extends View {
         switch (action) {
             case MotionEvent.ACTION_DOWN:
                 touchDown();
+                //TODO test
+                if (mPreviousUpEvent != null && mCurrentDownEvent != null) {
+                    if (isConsideredDoubleTap(mCurrentDownEvent, mPreviousUpEvent, event)) {
+                        Toast.makeText(context, "double click", Toast.LENGTH_SHORT).show();
+                        onScaleReset();
+                    }
+                }
+                mCurrentDownEvent = MotionEvent.obtain(event);
+
                 invalidate();
                 break;
             case MotionEvent.ACTION_MOVE:
-                touchMove();
+                touchMove(event);
                 invalidate();
                 break;
             case MotionEvent.ACTION_UP:
+                mPreviousUpEvent = MotionEvent.obtain(event);
                 //touchUp();
                 invalidate();
                 break;
             case MotionEvent.ACTION_POINTER_DOWN:
-
+                if (event.getPointerCount() >= 2) {
+                    float downDistance = spacing(event);
+                    if (actionMode == ACTION_NONE && downDistance > 10) {
+                        actionMode = ACTION_SELECT_BACKGROUND_SCALE;
+                    }
+                }
                 break;
         }
         preX = curX;
@@ -612,10 +666,20 @@ public class SketchpadView extends View {
         return true;
     }
 
+    private boolean isConsideredDoubleTap(MotionEvent firstDown, MotionEvent firstUp, MotionEvent secondDown) {
+        if (secondDown.getEventTime() - firstUp.getEventTime() > DOUBLE_TAP_TIMEOUT) {
+            return false;
+        }
+        int deltaX = (int) firstUp.getX() - (int) secondDown.getX();
+        int deltaY = (int) firstUp.getY() - (int) secondDown.getY();
+        return deltaX * deltaX + deltaY * deltaY < 10000;
+    }
+
 
     private void touchDown() {
         downX = curX;
         downY = curY;
+
         //如果当前是矩形模式
         if (curSketchpadData.drawMode == DrawMode.TYPE_RECT) {
             //触摸点
@@ -688,6 +752,8 @@ public class SketchpadView extends View {
         //如果是绘制模式
         if (curSketchpadData.drawMode == DrawMode.TYPE_STROKE) {
             curStrokeRecord = new StrokeRecord();
+            Matrix matrix = new Matrix();
+            //  curStrokeRecord.matrix = matrix;
             strokePaint.setAntiAlias(true);//由于降低密度绘制，所以需要抗锯齿
             strokePaint.setXfermode(null);
             strokePath = new Path();
@@ -701,7 +767,11 @@ public class SketchpadView extends View {
 
     }
 
-    private void touchMove() {
+    private void touchMove(MotionEvent event) {
+        //TODO
+        if (actionMode == ACTION_SELECT_BACKGROUND_SCALE) {
+            mScaleGestureDetector.onTouchEvent(event);
+        }
         //如果是矩形
         if (curSketchpadData.drawMode == DrawMode.TYPE_RECT && curRectRecord != null) {
             if (actionMode == ACTION_SELECT_RECT_DOT) {
@@ -742,6 +812,86 @@ public class SketchpadView extends View {
             strokePath.quadTo(preX, preY, (curX + preX) / 2, (curY + preY) / 2);
         }
     }
+
+    public void onScaleAction(ScaleGestureDetector detector) {
+        float[] bgCorners = calculateBGCorners(curBackgroundRecord);
+
+        float len = (float) Math.sqrt(Math.pow(bgCorners[0] - bgCorners[4], 2) + Math.pow(bgCorners[1] - bgCorners[5], 2));
+        double photoLen = Math.sqrt(Math.pow(curBackgroundRecord.photoRectSrc.width(), 2) + Math.pow(curBackgroundRecord.photoRectSrc.height(), 2));
+        float scaleFactor = detector.getScaleFactor();
+
+        if ((scaleFactor < 1 && len >= photoLen * SCALE_MIN && len >= SCALE_MIN_LEN) ||
+                (scaleFactor > 1 && len <= photoLen * SCALE_MAX)) {
+            //背景
+            if (curBackgroundRecord != null) {
+                curBackgroundRecord.matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
+            }
+            //矩形
+            if (curSketchpadData.rectRecordList.size() > 0) {
+                for (int i = 0; i < curSketchpadData.rectRecordList.size(); i++) {
+                    curSketchpadData.rectRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
+                }
+            }
+            //线
+            if (curSketchpadData.lineRecordList.size() > 0) {
+                for (int i = 0; i < curSketchpadData.lineRecordList.size(); i++) {
+                    curSketchpadData.lineRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
+                }
+            }
+            //补水点
+            if (curSketchpadData.waterDotRecordList.size() > 0) {
+                for (int i = 0; i < curSketchpadData.waterDotRecordList.size(); i++) {
+                    curSketchpadData.waterDotRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
+                }
+            }
+            //排水点
+            if (curSketchpadData.drainDotRecordList.size() > 0) {
+                for (int i = 0; i < curSketchpadData.drainDotRecordList.size(); i++) {
+                    curSketchpadData.drainDotRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
+                }
+            }
+            //橡皮擦
+            if (curSketchpadData.strokeRecordList.size() > 0) {
+//                for (int i = 0; i < curSketchpadData.strokeRecordList.size(); i++) {
+//                    // curSketchpadData.strokeRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
+//                    tempCanvas.scale(scaleFactor, scaleFactor);
+//                    }
+//                 //   curSketchpadData.strokeRecordList.get(i).paint.setTextScaleX(scaleFactor);
+//                }
+
+            }
+        }
+    }
+
+    public void onScaleReset() {
+        if (curBackgroundRecord != null) {
+            curBackgroundRecord.matrix.reset();
+        }
+        if (curRectRecord != null) {
+            Log.e("abc", "matrix4.width:" + curRectRecord.matrix);
+            // curPhotoRecord.matrix.invert();
+            curRectRecord.matrix.reset();
+        }
+    }
+
+    public float[] calculateBGCorners(BackgroundRecord record) {
+        float[] bgCornersSrc = new float[10];//0,1代表左上角点XY，2,3代表右上角点XY，4,5代表右下角点XY，6,7代表左下角点XY，8,9代表中心点XY
+        float[] bgCorners = new float[10];//0,1代表左上角点XY，2,3代表右上角点XY，4,5代表右下角点XY，6,7代表左下角点XY，8,9代表中心点XY
+        RectF rectF = record.photoRectSrc;
+        bgCornersSrc[0] = rectF.left;
+        bgCornersSrc[1] = rectF.top;
+        bgCornersSrc[2] = rectF.right;
+        bgCornersSrc[3] = rectF.top;
+        bgCornersSrc[4] = rectF.right;
+        bgCornersSrc[5] = rectF.bottom;
+        bgCornersSrc[6] = rectF.left;
+        bgCornersSrc[7] = rectF.bottom;
+        bgCornersSrc[8] = rectF.centerX();
+        bgCornersSrc[9] = rectF.centerY();
+        curBackgroundRecord.matrix.mapPoints(bgCorners, bgCornersSrc);
+        return bgCorners;
+    }
+
 
     /**
      * 线段端点的移动和旋转
@@ -1214,6 +1364,7 @@ public class SketchpadView extends View {
         curLineRecord = null;
         curWaterDotRecord = null;
         curDrainDotRecord = null;
+        curBackgroundRecord = null;
     }
 
     /**
@@ -1391,6 +1542,34 @@ public class SketchpadView extends View {
         return drainDotRecord;
     }
 
+    /**
+     * 设置背景
+     *
+     * @param bitmap
+     * @param width
+     * @param height
+     */
+    public void setBackgroundBitmap(Bitmap bitmap, int width, int height) {
+        if (bitmap != null) {
+            BackgroundRecord backgroundRecord = initBackgroundRecord(setBitmapWH(bitmap, width, height));
+            curSketchpadData.backgroundRecord = backgroundRecord;
+            curBackgroundRecord = backgroundRecord;
+            invalidate();
+        } else {
+            Toast.makeText(context, "background bitmap can not be null", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @NonNull
+    public BackgroundRecord initBackgroundRecord(Bitmap bitmap) {
+        BackgroundRecord newRecord = new BackgroundRecord();
+        newRecord.bitmap = bitmap;
+        newRecord.photoRectSrc = new RectF(0, 0, newRecord.bitmap.getWidth(), newRecord.bitmap.getHeight());
+        newRecord.scaleMax = getMaxScale(newRecord.photoRectSrc);//放大倍数
+        newRecord.matrix = new Matrix();
+        return newRecord;
+    }
+
 
     /**
      * 设置矩形区域，数据已暂存给 curRectRecord，下一步来绘制
@@ -1466,6 +1645,18 @@ public class SketchpadView extends View {
     }
 
     /**
+     * 计算距离
+     *
+     * @param event
+     * @return
+     */
+    private float spacing(MotionEvent event) {
+        float x = event.getX(0) - event.getX(1);
+        float y = event.getY(0) - event.getY(1);
+        return (float) Math.sqrt(x * x + y * y);
+    }
+
+    /**
      * 获取当前绘画模式
      *
      * @return
@@ -1503,4 +1694,6 @@ public class SketchpadView extends View {
             invalidate();
         }
     }
+
+
 }
