@@ -32,8 +32,8 @@
         android:layout_width="150px"
         android:layout_height="100px"
         android:layout_margin="10px"
-        android:textSize="20px"
         android:text="添加禁行区"
+        android:textSize="20px"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_none"
         app:layout_constraintTop_toBottomOf="@+id/bt_rect" />
@@ -43,8 +43,8 @@
         android:layout_width="150px"
         android:layout_height="100px"
         android:layout_margin="10px"
-        android:textSize="20px"
         android:text="虚拟墙"
+        android:textSize="20px"
         app:layout_constraintStart_toEndOf="@+id/bt_rect"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -53,8 +53,8 @@
         android:layout_width="150px"
         android:layout_height="100px"
         android:layout_margin="10px"
-        android:textSize="20px"
         android:text="添加虚拟墙"
+        android:textSize="20px"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_rect"
         app:layout_constraintTop_toBottomOf="@+id/bt_rect" />
@@ -64,8 +64,8 @@
         android:layout_width="150px"
         android:layout_height="100px"
         android:layout_margin="10px"
-        android:textSize="20px"
         android:text="点位"
+        android:textSize="20px"
         app:layout_constraintStart_toEndOf="@+id/bt_line"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -74,8 +74,8 @@
         android:layout_width="70px"
         android:layout_height="100px"
         android:layout_margin="10px"
-        android:textSize="20px"
         android:text="补水点"
+        android:textSize="20px"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_add_line"
         app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
@@ -86,8 +86,8 @@
         android:layout_width="70px"
         android:layout_height="100px"
         android:layout_margin="10px"
-        android:textSize="20px"
         android:text="排水点"
+        android:textSize="20px"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_add_water"
         app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
@@ -98,8 +98,8 @@
         android:layout_width="150px"
         android:layout_height="100px"
         android:layout_margin="10px"
-        android:textSize="20px"
         android:text="橡皮擦"
+        android:textSize="20px"
         app:layout_constraintStart_toEndOf="@+id/bt_dot"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -108,8 +108,8 @@
         android:layout_width="70px"
         android:layout_height="100px"
         android:layout_margin="10px"
-        android:textSize="20px"
         android:text="撤销"
+        android:textSize="20px"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_drain"
         app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
@@ -120,22 +120,29 @@
         android:layout_width="70px"
         android:layout_height="100px"
         android:layout_margin="10px"
-        android:textSize="20px"
         android:text="重置"
+        android:textSize="20px"
         android:visibility="invisible"
         app:layout_constraintStart_toEndOf="@+id/bt_draw_revoke"
         app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
 
 
-
-    <com.lavanidad.qiushui.SketchpadView
-        android:id="@+id/pad"
+    <FrameLayout
         android:layout_width="1200px"
         android:layout_height="1200px"
-        android:layout_margin="10px"
-        android:background="@color/white"
         app:layout_constraintStart_toStartOf="@+id/bt_add_rect"
-        app:layout_constraintTop_toBottomOf="@+id/bt_add_rect" />
+        app:layout_constraintTop_toBottomOf="@+id/bt_add_rect">
+
+
+        <com.lavanidad.qiushui.SketchpadView
+            android:id="@+id/pad"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="10px"
+            android:background="@color/white" />
+
+    </FrameLayout>
+
 
     <com.lavanidad.qiushui.test.SketchpadView1
         android:id="@+id/pad1"

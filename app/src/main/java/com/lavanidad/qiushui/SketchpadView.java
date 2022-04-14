@@ -175,12 +175,14 @@ public class SketchpadView extends View {
     private static float SCALE_MAX = 4.0f;
     private static float SCALE_MIN = 0.2f;
     private static float SCALE_MIN_LEN;
-    Matrix matrixStroke;
+    float scaleFactor;
+    private float initBGLength = 0;//初始背景图的对角线长度
+    private float len;
+    float sizex;
+
 
     public Bitmap tempBitmap;//临时绘制的bitmap
     public Canvas tempCanvas;
-    public Bitmap tempHoldBitmap;//保存已固化的笔画bitmap
-    public Canvas tempHoldCanvas;
 
     public SketchpadView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -209,7 +211,9 @@ public class SketchpadView extends View {
         mScaleGestureDetector = new ScaleGestureDetector(context, new ScaleGestureDetector.OnScaleGestureListener() {
             @Override
             public boolean onScale(ScaleGestureDetector detector) {
-                onScaleAction(detector);
+                if (curSketchpadData.drawMode != DrawMode.TYPE_STROKE) {
+                    onScaleAction(detector);
+                }
                 return true;
             }
 
@@ -225,8 +229,6 @@ public class SketchpadView extends View {
             }
         });
 
-        //TODO
-        matrixStroke = new Matrix();
     }
 
     @Override
@@ -240,13 +242,6 @@ public class SketchpadView extends View {
     protected void onDraw(Canvas canvas) {
         drawBackground(canvas);
         drawRecord(canvas);
-        //X:671 Y:917
-        Log.e("test", TAG);
-        Log.e("test", "左上:" + dotUpperLeftRect.centerX() + "," + dotUpperLeftRect.centerY());
-        Log.e("test", "右上:" + dotUpperRightRect.centerX() + "," + dotUpperRightRect.centerY());
-        Log.e("test", "右下:" + dotLowerRightRect.centerX() + "," + dotLowerRightRect.centerY());
-        Log.e("test", "左下:" + dotLowerLeftRect.centerX() + "," + dotLowerLeftRect.centerY());
-
     }
 
     public void drawBackground(Canvas canvas) {
@@ -259,6 +254,7 @@ public class SketchpadView extends View {
 //            matrix.postTranslate(canvas.getWidth() / 2 - curSketchpadData.backgroundBitmap.getWidth() / 2, canvas.getHeight() / 2 - curSketchpadData.backgroundBitmap.getHeight() / 2);
 //            canvas.drawBitmap(curSketchpadData.backgroundBitmap, matrix, null);
             canvas.drawBitmap(curBackgroundRecord.bitmap, curBackgroundRecord.matrix, null);
+
         }
     }
 
@@ -300,7 +296,6 @@ public class SketchpadView extends View {
                 SCALE_MAX = curRectRecord.scaleMax;
                 //计算图片四个角点和中心点
                 float[] rectCorners = calculateCorners(curRectRecord);
-                Log.e("test", "cor:" + Arrays.toString(rectCorners));
                 //绘制边框
                 //drawRectFrame(canvas, rectCorners);
                 //绘制顶点
@@ -333,30 +328,21 @@ public class SketchpadView extends View {
             /**
              * 画笔操作
              */
-            //新建一个临时画布，以便橡皮擦生效
             if (tempBitmap == null) {
-                tempBitmap = Bitmap.createBitmap(getWidth() / drawDensity, getHeight() / drawDensity, Bitmap.Config.ARGB_8888);
+                tempBitmap = Bitmap.createBitmap(curBackgroundRecord.bitmap.getWidth(),
+                        curBackgroundRecord.bitmap.getHeight(), Bitmap.Config.ARGB_8888);
                 tempCanvas = new Canvas(tempBitmap);
             }
-            //新建一个临时画布，以便保存过多的画笔
-            if (tempHoldBitmap == null) {
-                tempHoldBitmap = Bitmap.createBitmap(getWidth() / drawDensity, getHeight() / drawDensity, Bitmap.Config.ARGB_8888);
-                tempHoldCanvas = new Canvas(tempHoldBitmap);
-            }
-            //清楚画布
             clearCanvas(tempCanvas);
             tempCanvas.drawColor(Color.TRANSPARENT);
-            tempCanvas.drawBitmap(tempHoldBitmap, new Rect(0, 0, tempHoldBitmap.getWidth(), tempHoldBitmap.getHeight()), new Rect(0, 0, tempCanvas.getWidth(), tempCanvas.getHeight()), null);
             for (StrokeRecord record : curSketchpadData.strokeRecordList) {
                 if (record != null) {
                     tempCanvas.drawPath(record.path, record.paint);
-                    Log.e("path", ":" + record.toString());
                 }
             }
-            canvas.drawBitmap(tempBitmap, new Rect(0, 0, tempCanvas.getWidth(), tempCanvas.getHeight()), new Rect(0, 0, canvas.getWidth(), canvas.getHeight()), null);
-
-            matrixStroke.postTranslate(tempCanvas.getWidth(), tempCanvas.getHeight());
-            //   canvas.drawBitmap(tempBitmap, matrixStroke, null);
+            if (curBackgroundRecord != null) {
+                canvas.drawBitmap(tempBitmap, curBackgroundRecord.matrix, null);
+            }
         }
     }
 
@@ -555,11 +541,6 @@ public class SketchpadView extends View {
     private void drawLineButton(Canvas canvas, float[] lineCorners) {
         float x;
         float y;
-        Log.e("btn", "center:" + lineCorners[4] + "," + lineCorners[5]);
-        Log.e("btn", "left:" + lineCorners[0] + "," + lineCorners[1]);
-        Log.e("btn", "right:" + lineCorners[2] + "," + lineCorners[3]);
-        Log.e("btn", "width:" + lineConfirmMarkRect.width() + "height:" + lineConfirmMarkRect.height());
-        Log.e("btn", "1111:" + curLineRecord.lineOrigin.width() + "22222:" + curLineRecord.lineOrigin.height());
 
         x = lineCorners[4] - lineConfirmMarkRect.width() / 2;
         y = lineCorners[5] - lineConfirmMarkRect.height() - 30;
@@ -621,12 +602,18 @@ public class SketchpadView extends View {
     private boolean mDoubleTapEnabled = false;
     private MotionEvent mPreviousUpEvent;
 
+    //用于画笔/橡皮擦
+    private float moveX, moveY, preMoveX, preMoveY, moveDownX, moveDownY;
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         //获取在当前窗口内的绝对坐标
         getLocationInWindow(location);
         curX = (event.getRawX() - location[0]) / drawDensity;
         curY = (event.getRawY() - location[1]) / drawDensity;
+
+        moveX = (event.getRawX() - location[0]);
+        moveY = (event.getRawY() - location[1]);
 
         int action = event.getActionMasked();
         switch (action) {
@@ -636,7 +623,10 @@ public class SketchpadView extends View {
                 if (mPreviousUpEvent != null && mCurrentDownEvent != null) {
                     if (isConsideredDoubleTap(mCurrentDownEvent, mPreviousUpEvent, event)) {
                         Toast.makeText(context, "double click", Toast.LENGTH_SHORT).show();
-                        onScaleReset();
+                        if (curSketchpadData.drawMode == DrawMode.TYPE_STROKE) {
+                            //只有橡皮擦需要还原图片
+                            onScaleReset();
+                        }
                     }
                 }
                 mCurrentDownEvent = MotionEvent.obtain(event);
@@ -650,6 +640,7 @@ public class SketchpadView extends View {
             case MotionEvent.ACTION_UP:
                 mPreviousUpEvent = MotionEvent.obtain(event);
                 //touchUp();
+                Log.e("location", "x:" + moveX + ",y:" + moveY);
                 invalidate();
                 break;
             case MotionEvent.ACTION_POINTER_DOWN:
@@ -663,22 +654,20 @@ public class SketchpadView extends View {
         }
         preX = curX;
         preY = curY;
+        //140 280
+        preMoveX = moveX;
+        preMoveY = moveY;
+        Log.e("location", "preMoveX x:" + preMoveX + ",preMoveY y:" + preMoveY);
         return true;
-    }
-
-    private boolean isConsideredDoubleTap(MotionEvent firstDown, MotionEvent firstUp, MotionEvent secondDown) {
-        if (secondDown.getEventTime() - firstUp.getEventTime() > DOUBLE_TAP_TIMEOUT) {
-            return false;
-        }
-        int deltaX = (int) firstUp.getX() - (int) secondDown.getX();
-        int deltaY = (int) firstUp.getY() - (int) secondDown.getY();
-        return deltaX * deltaX + deltaY * deltaY < 10000;
     }
 
 
     private void touchDown() {
         downX = curX;
         downY = curY;
+
+        moveDownX = moveX;
+        moveDownY = moveY;
 
         //如果当前是矩形模式
         if (curSketchpadData.drawMode == DrawMode.TYPE_RECT) {
@@ -752,23 +741,22 @@ public class SketchpadView extends View {
         //如果是绘制模式
         if (curSketchpadData.drawMode == DrawMode.TYPE_STROKE) {
             curStrokeRecord = new StrokeRecord();
-            Matrix matrix = new Matrix();
-            //  curStrokeRecord.matrix = matrix;
             strokePaint.setAntiAlias(true);//由于降低密度绘制，所以需要抗锯齿
             strokePaint.setXfermode(null);
             strokePath = new Path();
-            strokePath.moveTo(downX, downY);
+            //TODO
+            strokePath.moveTo(moveDownX, moveDownY);
+            Log.e("test", "path:" + strokePath.toString() + Arrays.toString(curStrokeRecord.linePoints));
+
             curStrokeRecord.path = strokePath;
             strokePaint.setColor(strokeRealColor);
             strokePaint.setStrokeWidth(strokeSize);
             curStrokeRecord.paint = new Paint(strokePaint); // Clones the mPaint object
             curSketchpadData.strokeRecordList.add(curStrokeRecord);
         }
-
     }
 
     private void touchMove(MotionEvent event) {
-        //TODO
         if (actionMode == ACTION_SELECT_BACKGROUND_SCALE) {
             mScaleGestureDetector.onTouchEvent(event);
         }
@@ -809,16 +797,40 @@ public class SketchpadView extends View {
         }
         //如果是绘制模式
         if (curSketchpadData.drawMode == DrawMode.TYPE_STROKE) {
-            strokePath.quadTo(preX, preY, (curX + preX) / 2, (curY + preY) / 2);
+            strokePath.quadTo(preMoveX, preMoveY, (moveX + preMoveX) / 2, (moveY + preMoveY) / 2);
         }
     }
 
+    private boolean isConsideredDoubleTap(MotionEvent firstDown, MotionEvent firstUp, MotionEvent secondDown) {
+        if (secondDown.getEventTime() - firstUp.getEventTime() > DOUBLE_TAP_TIMEOUT) {
+            return false;
+        }
+        int deltaX = (int) firstUp.getX() - (int) secondDown.getX();
+        int deltaY = (int) firstUp.getY() - (int) secondDown.getY();
+        return deltaX * deltaX + deltaY * deltaY < 10000;
+    }
+
+
     public void onScaleAction(ScaleGestureDetector detector) {
         float[] bgCorners = calculateBGCorners(curBackgroundRecord);
+        Log.e("bgc", ":" + Arrays.toString(bgCorners));
 
-        float len = (float) Math.sqrt(Math.pow(bgCorners[0] - bgCorners[4], 2) + Math.pow(bgCorners[1] - bgCorners[5], 2));
+        len = (float) Math.sqrt(Math.pow(bgCorners[0] - bgCorners[4], 2) + Math.pow(bgCorners[1] - bgCorners[5], 2));
         double photoLen = Math.sqrt(Math.pow(curBackgroundRecord.photoRectSrc.width(), 2) + Math.pow(curBackgroundRecord.photoRectSrc.height(), 2));
-        float scaleFactor = detector.getScaleFactor();
+        scaleFactor = detector.getScaleFactor();
+        float x = detector.getCurrentSpanX();
+        float y = detector.getCurrentSpanY();
+
+        float px = bgCorners[2] - bgCorners[0];
+        float py = bgCorners[7] - bgCorners[1];
+
+        sizex = px / 1200;
+        float sizey = py / 1200;
+
+        Log.e("bgc", "sizex:" + sizex + ",sizeY:" + sizey);
+
+        Log.e("length", "len:" + len + ",initLength:" + initBGLength + ",scaleF:" + scaleFactor + ",test:" + len / initBGLength);
+
 
         if ((scaleFactor < 1 && len >= photoLen * SCALE_MIN && len >= SCALE_MIN_LEN) ||
                 (scaleFactor > 1 && len <= photoLen * SCALE_MAX)) {
@@ -829,49 +841,49 @@ public class SketchpadView extends View {
             //矩形
             if (curSketchpadData.rectRecordList.size() > 0) {
                 for (int i = 0; i < curSketchpadData.rectRecordList.size(); i++) {
-                    curSketchpadData.rectRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
+                    if (curSketchpadData.rectRecordList.get(i) != null)
+                        curSketchpadData.rectRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
                 }
             }
             //线
             if (curSketchpadData.lineRecordList.size() > 0) {
                 for (int i = 0; i < curSketchpadData.lineRecordList.size(); i++) {
-                    curSketchpadData.lineRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
+                    if (curSketchpadData.lineRecordList.get(i) != null)
+                        curSketchpadData.lineRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
                 }
             }
             //补水点
             if (curSketchpadData.waterDotRecordList.size() > 0) {
                 for (int i = 0; i < curSketchpadData.waterDotRecordList.size(); i++) {
-                    curSketchpadData.waterDotRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
+                    if (curSketchpadData.waterDotRecordList.get(i) != null)
+                        curSketchpadData.waterDotRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
                 }
             }
             //排水点
             if (curSketchpadData.drainDotRecordList.size() > 0) {
                 for (int i = 0; i < curSketchpadData.drainDotRecordList.size(); i++) {
-                    curSketchpadData.drainDotRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
+                    if (curSketchpadData.drainDotRecordList.get(i) != null)
+                        curSketchpadData.drainDotRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
                 }
             }
             //橡皮擦
-            if (curSketchpadData.strokeRecordList.size() > 0) {
+//            if (curSketchpadData.strokeRecordList.size() > 0) {
 //                for (int i = 0; i < curSketchpadData.strokeRecordList.size(); i++) {
-//                    // curSketchpadData.strokeRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
-//                    tempCanvas.scale(scaleFactor, scaleFactor);
-//                    }
-//                 //   curSketchpadData.strokeRecordList.get(i).paint.setTextScaleX(scaleFactor);
+//                    curSketchpadData.strokeRecordList.get(i).matrix.postScale(scaleFactor, scaleFactor, bgCorners[8], bgCorners[9]);
 //                }
-
-            }
+//
+//            }
         }
     }
 
     public void onScaleReset() {
         if (curBackgroundRecord != null) {
             curBackgroundRecord.matrix.reset();
+            float[] bgCorners = calculateBGCorners(curBackgroundRecord);
+            len = (float) Math.sqrt(Math.pow(bgCorners[0] - bgCorners[4], 2) + Math.pow(bgCorners[1] - bgCorners[5], 2));
         }
-        if (curRectRecord != null) {
-            Log.e("abc", "matrix4.width:" + curRectRecord.matrix);
-            // curPhotoRecord.matrix.invert();
-            curRectRecord.matrix.reset();
-        }
+
+        Log.e("length reset", "len:" + len + ",initLength:" + initBGLength + ",scaleF:" + scaleFactor + ",test:" + len / initBGLength);
     }
 
     public float[] calculateBGCorners(BackgroundRecord record) {
@@ -1194,7 +1206,6 @@ public class SketchpadView extends View {
         curDrainDotRecord.matrix.postTranslate((int) distanceX, (int) distanceY);
     }
 
-
     /**
      * 判断触摸点是否在外部按钮上
      *
@@ -1248,7 +1259,6 @@ public class SketchpadView extends View {
         }
         return false;
     }
-
 
     private boolean isInDrainDotButtonRect(float[] downPoint) {
         if (drainDotConfirmMarkRect.contains(downPoint[0], downPoint[1])) {
@@ -1374,10 +1384,10 @@ public class SketchpadView extends View {
      */
     public void addRectRecord(Bitmap bitmap, int width, int height) {
         if (bitmap != null) {
-            if (width < 100 || height < 100) {
-                Toast.makeText(context, "宽高设置请大于100", Toast.LENGTH_SHORT).show();
-                return;
-            }
+//            if (width < 100 || height < 100) {
+//                Toast.makeText(context, "宽高设置请大于100", Toast.LENGTH_SHORT).show();
+//                return;
+//            }
             RectRecord rectRecord = initRectRecord(setBitmapWH(bitmap, width, height));
             setRectRecord(rectRecord);
         } else {
@@ -1392,10 +1402,10 @@ public class SketchpadView extends View {
      */
     public void addLineRecord(Bitmap bitmap, int length) {
         if (bitmap != null) {
-            if (length < 300) {
-                Toast.makeText(context, "长度设置请大于300", Toast.LENGTH_SHORT).show();
-                return;
-            }
+//            if (length < 300) {
+//                Toast.makeText(context, "长度设置请大于300", Toast.LENGTH_SHORT).show();
+//                return;
+//            }
             LineRecord lineRecord = initLineRecord(setBitmapWH(bitmap, length, 8), length);
             setLineRecord(lineRecord);
         } else {
@@ -1549,11 +1559,14 @@ public class SketchpadView extends View {
      * @param width
      * @param height
      */
-    public void setBackgroundBitmap(Bitmap bitmap, int width, int height) {
+    public void addBackgroundBitmap(Bitmap bitmap, int width, int height) {
         if (bitmap != null) {
             BackgroundRecord backgroundRecord = initBackgroundRecord(setBitmapWH(bitmap, width, height));
             curSketchpadData.backgroundRecord = backgroundRecord;
             curBackgroundRecord = backgroundRecord;
+            float[] bgCorners = calculateBGCorners(curBackgroundRecord);
+            initBGLength = (float) Math.sqrt(Math.pow(bgCorners[0] - bgCorners[4], 2) + Math.pow(bgCorners[1] - bgCorners[5], 2));
+            len = initBGLength;
             invalidate();
         } else {
             Toast.makeText(context, "background bitmap can not be null", Toast.LENGTH_SHORT).show();

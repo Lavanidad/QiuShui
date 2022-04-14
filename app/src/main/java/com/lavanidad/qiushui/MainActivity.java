@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         bt_draw_reset.setOnClickListener(this);
 
         Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.map);
-        pad.setBackgroundBitmap(bitmap, 1200, 1200);
+        pad.addBackgroundBitmap(bitmap, 1200, 1200);
 
     }
 
@@ -91,7 +91,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.bt_add_rect:
                 Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.rect_area);
                 //step2
-                pad.addRectRecord(bitmap, 400, 400);
+                pad.addRectRecord(bitmap, 100, 100);
                 pad1.addRectRecord(400, 400);
                 break;
             case R.id.bt_line:
@@ -109,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 Bitmap bitmap1 = BitmapFactory.decodeResource(getResources(), R.mipmap.line_area1);
                 //pad.addLineRecord(400);
-                pad.addLineRecord(bitmap1, 300);
+                pad.addLineRecord(bitmap1, 100);
                 break;
             case R.id.bt_dot:
                 bt_add_rect.setVisibility(View.INVISIBLE);
@@ -127,7 +127,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 pad.setDrawMode(SketchpadView.DrawMode.TYPE_WATER_DOT);
 
                 Bitmap bitmap2 = BitmapFactory.decodeResource(getResources(), R.mipmap.water_dot);
-                pad.addWaterDotRecord(bitmap2, 200, 180);
+                pad.addWaterDotRecord(bitmap2, 100, 80);
 
                 break;
             case R.id.bt_drain:
@@ -135,7 +135,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 //排水
 
                 Bitmap bitmap3 = BitmapFactory.decodeResource(getResources(), R.mipmap.drain_dot);
-                pad.addDrainDotRecord(bitmap3, 200, 180);
+                pad.addDrainDotRecord(bitmap3, 100, 80);
                 break;
             case R.id.bt_draw:
                 bt_add_rect.setVisibility(View.INVISIBLE);
@@ -146,6 +146,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 bt_draw_reset.setVisibility(View.VISIBLE);
 
                 pad.setDrawMode(SketchpadView.DrawMode.TYPE_STROKE);
+
+                pad.onScaleReset();
+
                 break;
             case R.id.bt_draw_revoke:
                 pad.revoke();
