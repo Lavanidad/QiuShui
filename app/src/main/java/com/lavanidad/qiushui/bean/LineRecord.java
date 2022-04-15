@@ -15,4 +15,6 @@ public class LineRecord {
     public Matrix matrix;
     public RectF lineOrigin = new RectF();
     public float scaleMax = 3;
+
+    public float curLineLength;
 }

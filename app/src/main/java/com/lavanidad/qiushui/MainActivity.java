@@ -9,10 +9,15 @@ import android.transition.Slide;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
+import com.lavanidad.qiushui.bean.RectRecord;
 import com.lavanidad.qiushui.bean.SketchpadData;
 import com.lavanidad.qiushui.test.SketchpadData1;
 import com.lavanidad.qiushui.test.SketchpadView1;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -21,6 +26,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     Button bt_draw, bt_draw_revoke, bt_draw_reset;
     SketchpadView pad;
     SketchpadView1 pad1;
+
+    List<RectRecord> rectRecordList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,8 +65,42 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         bt_draw_revoke.setOnClickListener(this);
         bt_draw_reset.setOnClickListener(this);
 
+        rectRecordList = new ArrayList<>();
+
         Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.map);
         pad.addBackgroundBitmap(bitmap, 1200, 1200);
+        pad.setOnConfirmListener(new SketchpadView.OnConfirmListener() {
+            @Override
+            public void onRectConfirm(RectRecord record, int drawMode) {
+             //   rectRecordList.add(record);
+                Toast.makeText(MainActivity.this, "onRectConfirm" + rectRecordList.size(), Toast.LENGTH_SHORT).show();
+                if (drawMode == SketchpadView.DrawMode.TYPE_NONE) {
+                    bt_add_rect.setVisibility(View.INVISIBLE);
+                }
+            }
+
+            @Override
+            public void onRectCancel(RectRecord record) {
+                rectRecordList.remove(record);
+                Toast.makeText(MainActivity.this, "onRectCancel" + rectRecordList.size(), Toast.LENGTH_SHORT).show();
+                Log.e("bt","size:" + rectRecordList.size());
+            }
+
+            @Override
+            public void onLineConfirm() {
+                Toast.makeText(MainActivity.this, "onLineConfirm", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onWaterDotConfirm() {
+                Toast.makeText(MainActivity.this, "onWaterDotConfirm", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onDrainDotConfirm() {
+                Toast.makeText(MainActivity.this, "onDrainDotConfirm", Toast.LENGTH_SHORT).show();
+            }
+        });
 
     }
 
@@ -109,7 +150,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 Bitmap bitmap1 = BitmapFactory.decodeResource(getResources(), R.mipmap.line_area1);
                 //pad.addLineRecord(400);
-                pad.addLineRecord(bitmap1, 100);
+                pad.addLineRecord(bitmap1, 200);
                 break;
             case R.id.bt_dot:
                 bt_add_rect.setVisibility(View.INVISIBLE);
@@ -127,7 +168,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 pad.setDrawMode(SketchpadView.DrawMode.TYPE_WATER_DOT);
 
                 Bitmap bitmap2 = BitmapFactory.decodeResource(getResources(), R.mipmap.water_dot);
-                pad.addWaterDotRecord(bitmap2, 100, 80);
+                pad.addWaterDotRecord(bitmap2, 150, 130);
 
                 break;
             case R.id.bt_drain:
@@ -135,7 +176,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 //排水
 
                 Bitmap bitmap3 = BitmapFactory.decodeResource(getResources(), R.mipmap.drain_dot);
-                pad.addDrainDotRecord(bitmap3, 100, 80);
+                pad.addDrainDotRecord(bitmap3, 150, 130);
                 break;
             case R.id.bt_draw:
                 bt_add_rect.setVisibility(View.INVISIBLE);
@@ -151,10 +192,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 break;
             case R.id.bt_draw_revoke:
-                pad.revoke();
+                pad.strokeRevoke();
                 break;
             case R.id.bt_draw_reset:
-                pad.reset();
+                pad.strokeReset();
                 break;
         }
     }

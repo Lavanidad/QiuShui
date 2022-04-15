@@ -12,6 +12,8 @@ public class RectRecord {
     public RectF rectOrigin = new RectF();
     public float scaleMax = 3;
 
+    public float curRectWidth;
+    public float curRectHeight;
 
     @Override
     public String toString() {
