@@ -9,10 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
-/**
- * Create By XHD On 2022/04/12
- * Description：
- **/
+
 public class MyScrollView extends ConstraintLayout {
 
     public MyScrollView(@NonNull Context context, @Nullable AttributeSet attrs) {

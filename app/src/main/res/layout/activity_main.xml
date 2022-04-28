@@ -1,157 +1,201 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#f5f5f5"
-    tools:context=".MainActivity">
-
-    <Button
-        android:id="@+id/bt_none"
-        android:layout_width="150px"
-        android:layout_height="100px"
-        android:layout_margin="10px"
-        android:text="取消"
-        android:textSize="20px"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Button
-        android:id="@+id/bt_rect"
-        android:layout_width="150px"
-        android:layout_height="100px"
-        android:layout_margin="10px"
-        android:text="禁行区"
-        android:textSize="20px"
-        app:layout_constraintStart_toEndOf="@+id/bt_none"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Button
-        android:id="@+id/bt_add_rect"
-        android:layout_width="150px"
-        android:layout_height="100px"
-        android:layout_margin="10px"
-        android:text="添加禁行区"
-        android:textSize="20px"
-        android:visibility="invisible"
-        app:layout_constraintStart_toEndOf="@+id/bt_none"
-        app:layout_constraintTop_toBottomOf="@+id/bt_rect" />
-
-    <Button
-        android:id="@+id/bt_line"
-        android:layout_width="150px"
-        android:layout_height="100px"
-        android:layout_margin="10px"
-        android:text="虚拟墙"
-        android:textSize="20px"
-        app:layout_constraintStart_toEndOf="@+id/bt_rect"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Button
-        android:id="@+id/bt_add_line"
-        android:layout_width="150px"
-        android:layout_height="100px"
-        android:layout_margin="10px"
-        android:text="添加虚拟墙"
-        android:textSize="20px"
-        android:visibility="invisible"
-        app:layout_constraintStart_toEndOf="@+id/bt_rect"
-        app:layout_constraintTop_toBottomOf="@+id/bt_rect" />
-
-    <Button
-        android:id="@+id/bt_dot"
-        android:layout_width="150px"
-        android:layout_height="100px"
-        android:layout_margin="10px"
-        android:text="点位"
-        android:textSize="20px"
-        app:layout_constraintStart_toEndOf="@+id/bt_line"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Button
-        android:id="@+id/bt_add_water"
-        android:layout_width="70px"
-        android:layout_height="100px"
-        android:layout_margin="10px"
-        android:text="补水点"
-        android:textSize="20px"
-        android:visibility="invisible"
-        app:layout_constraintStart_toEndOf="@+id/bt_add_line"
-        app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
+    android:background="#F6F5FA">
 
 
-    <Button
-        android:id="@+id/bt_drain"
-        android:layout_width="70px"
-        android:layout_height="100px"
-        android:layout_margin="10px"
-        android:text="排水点"
-        android:textSize="20px"
-        android:visibility="invisible"
-        app:layout_constraintStart_toEndOf="@+id/bt_add_water"
-        app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
+    <!-- 功能选择菜单 -->
+    <LinearLayout
+        android:id="@+id/ll_main_menu"
+        android:layout_width="100px"
+        android:layout_height="400px"
+        android:layout_marginTop="170px"
+        android:background="@drawable/shape_menu_right"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:translationZ="5dp">
 
+        <Button
+            android:id="@+id/bt_dot"
+            android:layout_width="48px"
+            android:layout_height="48px"
+            android:layout_marginTop="40px"
+            android:background="@mipmap/icon_dot_unpressed" />
 
-    <Button
-        android:id="@+id/bt_draw"
-        android:layout_width="150px"
-        android:layout_height="100px"
-        android:layout_margin="10px"
-        android:text="橡皮擦"
-        android:textSize="20px"
-        app:layout_constraintStart_toEndOf="@+id/bt_dot"
-        app:layout_constraintTop_toTopOf="parent" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5px"
+            android:gravity="center"
+            android:text="点位"
+            android:textColor="@color/black"
+            android:textSize="14px" />
 
-    <Button
-        android:id="@+id/bt_draw_revoke"
-        android:layout_width="70px"
-        android:layout_height="100px"
-        android:layout_margin="10px"
-        android:text="撤销"
-        android:textSize="20px"
-        android:visibility="invisible"
-        app:layout_constraintStart_toEndOf="@+id/bt_drain"
-        app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
+        <Button
+            android:id="@+id/bt_line"
+            android:layout_width="48px"
+            android:layout_height="48px"
+            android:layout_marginTop="40px"
+            android:background="@mipmap/icon_wall_unpressed" />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5px"
+            android:gravity="center"
+            android:text="虚拟墙"
+            android:textColor="@color/black"
+            android:textSize="14px" />
 
-    <Button
-        android:id="@+id/bt_draw_reset"
-        android:layout_width="70px"
-        android:layout_height="100px"
-        android:layout_margin="10px"
-        android:text="重置"
-        android:textSize="20px"
-        android:visibility="invisible"
-        app:layout_constraintStart_toEndOf="@+id/bt_draw_revoke"
-        app:layout_constraintTop_toBottomOf="@+id/bt_dot" />
+        <Button
+            android:id="@+id/bt_rect"
+            android:layout_width="48px"
+            android:layout_height="48px"
+            android:layout_marginTop="40px"
+            android:background="@mipmap/icon_rect_unpressed" />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5px"
+            android:gravity="center"
+            android:text="禁行区"
+            android:textColor="@color/black"
+            android:textSize="14px" />
+    </LinearLayout>
 
-    <FrameLayout
-        android:layout_width="1200px"
-        android:layout_height="1200px"
-        app:layout_constraintStart_toStartOf="@+id/bt_add_rect"
-        app:layout_constraintTop_toBottomOf="@+id/bt_add_rect">
-
-
-        <com.lavanidad.qiushui.SketchpadView
-            android:id="@+id/pad"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_margin="10px"
-            android:background="@color/white" />
-
-    </FrameLayout>
-
-
-    <com.lavanidad.qiushui.test.SketchpadView1
-        android:id="@+id/pad1"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="10px"
+    <!-- 子按钮区域 -->
+    <RelativeLayout
+        android:id="@+id/rl_child_menu"
+        android:layout_width="80px"
+        android:layout_height="184px"
+        android:layout_marginLeft="5px"
+        android:layout_marginTop="328px"
+        android:layout_toRightOf="@+id/ll_main_menu"
+        android:background="@drawable/shape_menu_right"
         android:visibility="gone"
-        app:layout_constraintStart_toStartOf="@+id/bt_add_rect"
-        app:layout_constraintTop_toBottomOf="@+id/bt_add_rect" />
+        app:layout_constraintStart_toEndOf="@+id/ll_main_menu"
+        app:layout_constraintTop_toTopOf="@id/ll_main_menu">
+
+        <!-- 添加点位 -->
+        <LinearLayout
+            android:id="@+id/ll_dot_menu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:visibility="visible">
+
+            <Button
+                android:id="@+id/bt_add_waterdot"
+                style="@style/roundButton"
+                android:layout_width="match_parent"
+                android:layout_height="40px"
+                android:text="补水点"
+                android:textColor="@color/black"
+                android:textSize="16px"
+                app:backgroundTint="@color/white"
+                app:strokeWidth="1px" />
+
+            <Button
+                android:id="@+id/bt_add_draindot"
+                style="@style/roundButton"
+                android:layout_width="match_parent"
+                android:layout_height="40px"
+                android:layout_marginTop="40px"
+                android:text="排水点"
+                android:textColor="@color/black"
+                android:textSize="16px"
+                app:backgroundTint="@color/white"
+                app:strokeWidth="1px" />
+        </LinearLayout>
+
+    </RelativeLayout>
 
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <!-- 画板 -->
+    <com.lavanidad.qiushui.map.SketchpadView2
+        android:id="@+id/sketchpadView"
+        android:layout_width="580px"
+        android:layout_height="580px"
+        android:layout_marginLeft="250px"
+        android:layout_marginTop="160px"
+        android:visibility="visible" />
+
+
+    <LinearLayout
+        android:id="@+id/ll_rectList"
+        android:layout_width="275px"
+        android:layout_height="570px"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="150px"
+        android:background="@drawable/shape_menu_left"
+        android:orientation="vertical"
+        android:visibility="visible">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_rect"
+            android:layout_width="match_parent"
+            android:layout_height="480px"
+            android:layout_margin="5px"
+            android:visibility="visible" />
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="70px"
+            android:layout_marginBottom="5px"
+            android:gravity="center_horizontal">
+
+            <LinearLayout
+                android:layout_width="50px"
+                android:layout_height="70px"
+                android:layout_marginLeft="20px"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <Button
+                    android:id="@+id/bt_save_rect"
+                    android:layout_width="48px"
+                    android:layout_height="48px"
+                    android:background="@mipmap/icon_save" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/bt_save"
+                    android:layout_marginTop="5px"
+                    android:gravity="center"
+                    android:text="保存"
+                    android:textColor="@color/black"
+                    android:textSize="14px" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="50px"
+                android:layout_height="70px"
+                android:layout_marginLeft="150px"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <Button
+                    android:id="@+id/bt_delete_rect"
+                    android:layout_width="48px"
+                    android:layout_height="48px"
+                    android:background="@mipmap/icon_delete" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/bt_save"
+                    android:layout_marginTop="5px"
+                    android:gravity="center"
+                    android:text="删除"
+                    android:textColor="@color/black"
+                    android:textSize="14px" />
+            </LinearLayout>
+        </RelativeLayout>
+    </LinearLayout>
+</RelativeLayout>
