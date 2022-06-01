@@ -12,7 +12,9 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Shader;
+import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -67,8 +69,8 @@ public class SketchpadView2 extends View {
     private int[] absLocation = new int[2];//绝对坐标
     private float curX, curY;//当前的坐标X Y
     private float preX, preY;
-    private static int minWidth = 100;//涉及拉伸缩放，给绘制对象设置的最小宽高
-    private static int minHeight = 100;
+    private static int minWidth = 50;//涉及拉伸缩放，给绘制对象设置的最小宽高
+    private static int minHeight = 50;
     private static float SCALE_MAX = 1.8f;//涉及拉伸缩放，给背景设置的最小宽高
     private static float SCALE_MIN = 0.8f;
     private RectF tempRect;//辅助
@@ -100,6 +102,8 @@ public class SketchpadView2 extends View {
     //对外接口
     private OnDrawControlListener onDrawControlListener;
 
+    private boolean canBackGroundMove = true;
+
     /**
      * 测试用数据设置
      */
@@ -116,17 +120,16 @@ public class SketchpadView2 extends View {
 
 
     private void initSize() {
-        //test
-        paint.setColor(getResources().getColor(R.color.antiquewhite));
-        paint.setStyle(Paint.Style.FILL);
 
-        rectRecFSize = 40;
-        rectDotSize = 20;
-        rotateMarkBM = DrawUtil.setBitmapWH(BitmapFactory.decodeResource(getResources(), R.mipmap.round_rotate), rectDotSize, rectDotSize);
-        dotMarkBM = DrawUtil.setBitmapWH(BitmapFactory.decodeResource(getResources(), R.mipmap.round_dot), rectDotSize, rectDotSize);
-        confirmMarkBM = DrawUtil.setBitmapWH(BitmapFactory.decodeResource(getResources(), R.mipmap.round_confirm), rectDotSize, rectDotSize);
-        cancelMarkBM = DrawUtil.setBitmapWH(BitmapFactory.decodeResource(getResources(), R.mipmap.round_cancel), rectDotSize, rectDotSize);
-        scaleMarkBM = DrawUtil.setBitmapWH(BitmapFactory.decodeResource(getResources(), R.mipmap.round_scale), rectDotSize, rectDotSize);
+
+        rectRecFSize = 36;
+        rectDotSize = 18;
+        rotateMarkBM = DrawUtil.setBitmapWH(BitmapFactory.decodeResource(getResources(), R.mipmap.icon_rotate), rectDotSize, rectDotSize);
+        dotMarkBM = DrawUtil.setBitmapWH(BitmapFactory.decodeResource(getResources(), R.mipmap.icon_dot), rectDotSize, rectDotSize);
+        confirmMarkBM = DrawUtil.setBitmapWH(BitmapFactory.decodeResource(getResources(), R.mipmap.icon_confirm), rectDotSize, rectDotSize);
+        cancelMarkBM = DrawUtil.setBitmapWH(BitmapFactory.decodeResource(getResources(), R.mipmap.icon_cancel), rectDotSize, rectDotSize);
+        scaleMarkBM = DrawUtil.setBitmapWH(BitmapFactory.decodeResource(getResources(), R.mipmap.icon_scale), rectDotSize, rectDotSize);
+
 
         rectUpperLeftRect = new RectF(0, 0, rectRecFSize, rectRecFSize);
         rectUpperRightRect = new RectF(0, 0, rectRecFSize, rectRecFSize);
@@ -201,10 +204,14 @@ public class SketchpadView2 extends View {
             if (record.type == 0) {
                 float[] rectCorners = DrawUtil.calculateRectCorners(record);
                 drawRectFrame(canvas, rectCorners);
+
+
+
             } else if (record.type == 1) {
                 float[] lineCorners = DrawUtil.calculateRectCorners(record);
                 drawLineFrame(canvas, lineCorners);
             } else {
+                //绘制点
                 canvas.drawBitmap(record.bitmap, record.matrix, null);
             }
         }
@@ -238,9 +245,11 @@ public class SketchpadView2 extends View {
     public boolean onTouchEvent(MotionEvent event) {
         mGestureDetector.onTouchEvent(event);
 
-        getLocationInWindow(absLocation);
-        curX = (event.getRawX() - absLocation[0]);
-        curY = (event.getRawY() - absLocation[1]);
+//TODO 0515        getLocationInWindow(absLocation);
+//        curX = (event.getRawX() - absLocation[0]);
+//        curY = (event.getRawY() - absLocation[1]);
+        curX = event.getX();
+        curY = event.getY();
 
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
@@ -270,6 +279,7 @@ public class SketchpadView2 extends View {
 
     private void touchDown() {
         float[] downPoint = new float[]{curX, curY};
+
         selectOtherDraw(downPoint);
         if (curDrawRecord == null) {
             return;
@@ -282,16 +292,23 @@ public class SketchpadView2 extends View {
             }
             //是否触摸顶点区域
             if (isInDrawDot(downPoint)) {
+                canBackGroundMove = false;
                 return;
             }
         } else {
             if (isInRectDot(downPoint)) {
+                canBackGroundMove = false;
                 return;
             }
         }
     }
 
+
     private void touchMove(MotionEvent event) {
+        //TODO 0515
+        if (curBackgroundRecord != null && canBackGroundMove && actionMode != ACTION_SELECT_BACKGROUND_SCALE) {
+            onZoomMove((curX - preX), (curY - preY));
+        }
         if (actionMode == ACTION_SELECT_BACKGROUND_SCALE) {
             mScaleGestureDetector.onTouchEvent(event);
         }
@@ -301,6 +318,34 @@ public class SketchpadView2 extends View {
                 curDrawRecord.matrix.postTranslate((int) (curX - preX), (int) (curY - preY));
             }
         }
+    }
+
+    //TODO 0515
+    private void onZoomMove(float distanceX, float distanceY) {
+        curBackgroundRecord.photoRectSrc.offset((int) distanceX, (int) distanceY);
+        float left = curBackgroundRecord.photoRectSrc.left;
+        float top = curBackgroundRecord.photoRectSrc.top;
+        float right = curBackgroundRecord.photoRectSrc.right;
+        float bottom = curBackgroundRecord.photoRectSrc.bottom;
+        curBackgroundRecord.matrix.postTranslate((int) distanceX, (int) distanceY);
+
+
+        if (curSketchpadData.drawRecordList.size() > 0) {
+            for (int i = 0; i < curSketchpadData.drawRecordList.size(); i++) {
+                if (curSketchpadData.drawRecordList.get(i) != null &&
+                        (curSketchpadData.drawRecordList.get(i).type == 0 || curSketchpadData.drawRecordList.get(i).type == 1)) {
+                    curSketchpadData.drawRecordList.get(i).rectOrigin.offset((int) distanceX, (int) distanceY);
+                    curSketchpadData.drawRecordList.get(i).matrix.reset();
+                    curSketchpadData.drawRecordList.get(i).matrix.postTranslate(-curSketchpadData.drawRecordList.get(i).rectOrigin.centerX(), -curSketchpadData.drawRecordList.get(i).rectOrigin.centerY());
+                    curSketchpadData.drawRecordList.get(i).matrix.postRotate(curSketchpadData.drawRecordList.get(i).mRotation);
+                    curSketchpadData.drawRecordList.get(i).matrix.postTranslate(curSketchpadData.drawRecordList.get(i).rectOrigin.centerX(), curSketchpadData.drawRecordList.get(i).rectOrigin.centerY());
+                } else if (curSketchpadData.drawRecordList.get(i) != null &&
+                        (curSketchpadData.drawRecordList.get(i).type == 2 || curSketchpadData.drawRecordList.get(i).type == 3)) {
+                    curSketchpadData.drawRecordList.get(i).matrix.postTranslate((int) distanceX, (int) distanceY);
+                }
+            }
+        }
+        invalidate();
     }
 
     private GestureDetector.SimpleOnGestureListener simpleOnGestureListener = new GestureDetector.SimpleOnGestureListener() {
@@ -319,7 +364,7 @@ public class SketchpadView2 extends View {
     private ScaleGestureDetector.OnScaleGestureListener scaleGestureListener = new ScaleGestureDetector.OnScaleGestureListener() {
         @Override
         public boolean onScale(ScaleGestureDetector scaleGestureDetector) {
-            onScaleAction(scaleGestureDetector);
+            //onScaleAction(scaleGestureDetector);
             return true;
         }
 
@@ -340,17 +385,12 @@ public class SketchpadView2 extends View {
      * @param canvas
      * @param lineCorners
      */
+    private Drawable mainDrawable;
     private void drawRectFrame(Canvas canvas, float[] lineCorners) {
-        Path rectFramePath = new Path();
-        rectFramePath.moveTo(lineCorners[0], lineCorners[1]);
-        rectFramePath.lineTo(lineCorners[2], lineCorners[3]);
-        rectFramePath.lineTo(lineCorners[4], lineCorners[5]);
-        rectFramePath.lineTo(lineCorners[6], lineCorners[7]);
-        rectFramePath.close();
-        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.rect_area);
-        Shader mShader = new BitmapShader(bitmap, Shader.TileMode.REPEAT, Shader.TileMode.MIRROR);
-        rectFramePaint.setShader(mShader);
-        canvas.drawPath(rectFramePath, rectFramePaint);
+        mainDrawable = getResources().getDrawable(R.mipmap.icon_eraser_pressed);
+        mainDrawable.setBounds((int) curDrawRecord.rectOrigin.left, (int) curDrawRecord.rectOrigin.top,
+                (int) curDrawRecord.rectOrigin.right, (int) curDrawRecord.rectOrigin.bottom);
+        mainDrawable.draw(canvas);
     }
 
     private void drawLineFrame(Canvas canvas, float[] lineCorners) {
@@ -416,7 +456,6 @@ public class SketchpadView2 extends View {
         canvas.drawBitmap(cancelMarkBM, bitmapx, bitmapy, null);
 
 
-        //if (type == 0) {
         //上中
         x = rectCorners[10] - rectUpperLeftRect.width() + rectUpperLeftRect.width() / 2;
         y = rectCorners[11] - rectUpperLeftRect.height() + rectUpperLeftRect.height() / 2;
@@ -432,7 +471,6 @@ public class SketchpadView2 extends View {
         bitmapx = x + rectDotSize / 2;
         bitmapy = y + rectDotSize / 2;
         canvas.drawBitmap(dotMarkBM, bitmapx, bitmapy, null);
-        // }
 
 
         //右中
@@ -451,17 +489,6 @@ public class SketchpadView2 extends View {
         bitmapx = x + rectDotSize / 2;
         bitmapy = y + rectDotSize / 2;
         canvas.drawBitmap(dotMarkBM, bitmapx, bitmapy, null);
-
-
-        canvas.drawRect(rectUpperLeftRect, paint);
-        canvas.drawRect(rectUpperRightRect, paint);
-        canvas.drawRect(rectLowerRightRect, paint);
-        canvas.drawRect(rectLowerLeftRect, paint);
-
-        canvas.drawRect(rectUpperMidRect, paint);
-        canvas.drawRect(rectRightMidRect, paint);
-        canvas.drawRect(rectBottomMidRect, paint);
-        canvas.drawRect(rectLeftMidRect, paint);
     }
 
     private void drawDot(Canvas canvas, float[] dotCorners) {
@@ -477,10 +504,6 @@ public class SketchpadView2 extends View {
         y = dotCorners[3] - rectDotSize / 2;
         dotConfirmMarkRect.offsetTo(x, y);
         canvas.drawBitmap(confirmMarkBM, x, y, null);
-
-        //TODO
-        canvas.drawRect(dotCancelMarkRect, paint);
-        canvas.drawRect(dotConfirmMarkRect, paint);
     }
 
     private void drawDotFrame(Canvas canvas, float[] dotCorners) {
@@ -506,9 +529,11 @@ public class SketchpadView2 extends View {
         if (clickRecord != null) {
             setDrawRecord(clickRecord);
             actionMode = ACTION_DRAW;
+            canBackGroundMove = false;
             curSketchpadData.touchMode = TouchMode.TOUCH_NONE;
         } else {
             actionMode = ACTION_NONE;
+            canBackGroundMove = true;
             curSketchpadData.touchMode = TouchMode.TOUCH_NONE;
         }
     }
@@ -679,6 +704,7 @@ public class SketchpadView2 extends View {
         curDrawRecord.matrix.postTranslate(-curDrawRecord.rectOrigin.centerX(), -curDrawRecord.rectOrigin.centerY());
         curDrawRecord.matrix.postRotate(curDrawRecord.mRotation);
         curDrawRecord.matrix.postTranslate(curDrawRecord.rectOrigin.centerX(), curDrawRecord.rectOrigin.centerY());
+        invalidate();
     }
 
     private boolean checkCanScale(float distance) {
@@ -804,6 +830,9 @@ public class SketchpadView2 extends View {
                     }
                 }
             }
+
+            invalidateMatrix();
+            invalidate();
         }
     }
 
@@ -826,32 +855,55 @@ public class SketchpadView2 extends View {
         record.bitmap = bitmap;
         record.type = type;
         record.mRotation = 0;
-        record.name = "test" + i++;
+        String name = "";
+        if (type == 0) {
+            name = "禁行区";
+        } else if (type == 1) {
+            name = "虚拟墙";
+        } else if (type == 2) {
+            name = "补水点";
+        } else if (type == 3) {
+            name = "排水点";
+        }
+        record.name = name + i++;
         record.matrix = new Matrix();
 
-        if (curSketchpadData.drawRecordList.size() > 0 && curDrawRecord != null) {//有多个图片
-            record.rectOrigin = new RectF((getWidth() / 2 - bitmap.getWidth() / 2) + 25 * curSketchpadData.drawRecordList.size(),
-                    (getHeight() / 2 - bitmap.getHeight() / 2) + 25 * curSketchpadData.drawRecordList.size(),
-                    (getWidth() / 2 + bitmap.getWidth() / 2) + 25 * curSketchpadData.drawRecordList.size(),
-                    (getHeight() / 2 + bitmap.getHeight() / 2) + 25 * curSketchpadData.drawRecordList.size());
-        } else {
-            record.rectOrigin = new RectF((getWidth() / 2 - bitmap.getWidth() / 2),
-                    (getHeight() / 2 - bitmap.getHeight() / 2),
-                    (getWidth() / 2 + bitmap.getWidth() / 2),
-                    (getHeight() / 2 + bitmap.getHeight() / 2));
-        }
+// TODO        if (curSketchpadData.drawRecordList.size() > 0 && curDrawRecord != null) {//有多个图片
+//            record.rectOrigin = new RectF((getWidth() / 2 - bitmap.getWidth() / 2) + 25 * curSketchpadData.drawRecordList.size(),
+//                    (getHeight() / 2 - bitmap.getHeight() / 2) + 25 * curSketchpadData.drawRecordList.size(),
+//                    (getWidth() / 2 + bitmap.getWidth() / 2) + 25 * curSketchpadData.drawRecordList.size(),
+//                    (getHeight() / 2 + bitmap.getHeight() / 2) + 25 * curSketchpadData.drawRecordList.size());
+//            Log.e("draw", "w:" + getWidth() / 2 + "h:" + getHeight()/2);
+//        } else {
+//            record.rectOrigin = new RectF((getWidth() / 2 - bitmap.getWidth() / 2),
+//                    (getHeight() / 2 - bitmap.getHeight() / 2),
+//                    (getWidth() / 2 + bitmap.getWidth() / 2),
+//                    (getHeight() / 2 + bitmap.getHeight() / 2));
+//            Log.e("draw", "2w:" + getWidth() / 2 + "h:" + getHeight()/2);
+//        }
+        record.rectOrigin = new RectF((300 - bitmap.getWidth() / 2),
+                (300 - bitmap.getHeight() / 2),
+                (300 + bitmap.getWidth() / 2),
+                (300 + bitmap.getHeight() / 2));
+        Log.e("boo", "rect D:" + record.rectOrigin.left + "," + record.rectOrigin.top + "," + record.rectOrigin.right + "," + record.rectOrigin.bottom);
+        Log.e("boo", "rect E:" + record.rectOrigin.width() + "," + record.rectOrigin.height());
         return record;
     }
 
     @NonNull
-    private DrawRecord initDrawRecordByPoint(Bitmap bitmap, int left, int top, int right, int bottom, int type) {
+    private DrawRecord initDrawRecordByPoint(Bitmap bitmap, int left, int top, int right, int bottom, int type, float rotation, String name) {
         DrawRecord record = new DrawRecord();
         record.bitmap = bitmap;
         record.type = type;
-        record.mRotation = 0;
-        record.name = "testAAAA" + i++;
+        record.mRotation = rotation;
+        record.name = name;
         record.matrix = new Matrix();
         record.rectOrigin = new RectF(left, top, right, bottom);
+        Log.e("boo", "rect B:" + record.rectOrigin.left + "," + record.rectOrigin.top + "," + record.rectOrigin.right + "," + record.rectOrigin.bottom);
+        Log.e("boo", "rect:" + left + "," + top + "," + right + "," + bottom);
+        Log.e("boo", "rect A:" + record.rectOrigin.width() + "," + record.rectOrigin.height());
+        //record.mRotation = 30;
+
         return record;
     }
 
@@ -859,6 +911,7 @@ public class SketchpadView2 extends View {
         curSketchpadData.drawRecordList.remove(record);
         if (record != null) {
             curSketchpadData.drawRecordList.add(record);
+            //Log.e("test", "size:" + curSketchpadData.drawRecordList.size());
         }
         curDrawRecord = record;
         invalidate();
@@ -869,22 +922,35 @@ public class SketchpadView2 extends View {
         DrawRecord dotRecord = new DrawRecord();
         dotRecord.bitmap = bitmap;
         dotRecord.type = type;
-        dotRecord.name = "test" + i++;
+        String name = "";
+        if (type == 0) {
+            name = "禁行区";
+        } else if (type == 1) {
+            name = "虚拟墙";
+        } else if (type == 2) {
+            name = "补水点";
+        } else if (type == 3) {
+            name = "排水点";
+        }
+        dotRecord.name = name + i++;
         dotRecord.rectOrigin = new RectF(0, 0, dotRecord.bitmap.getWidth(), dotRecord.bitmap.getHeight());
-        dotRecord.matrix = new Matrix();
-        dotRecord.matrix.postTranslate(getWidth() / 4 + bitmap.getWidth(), getHeight() / 4 + bitmap.getHeight());
+        dotRecord.matrix = new Matrix(curBackgroundRecord.matrix);
+        //TODO 0504
+        // dotRecord.matrix.postTranslate(getWidth() / 4 + bitmap.getWidth(), getHeight() / 4 + bitmap.getHeight());
+        dotRecord.matrix.postTranslate(getWidth() / 2 + (i * 20), getHeight() / 2 + (i * 20));
         return dotRecord;
     }
 
     @NonNull
-    private DrawRecord initDotRecordByPoint(Bitmap bitmap, int left, int top, int type) {
+    private DrawRecord initDotRecordByPoint(Bitmap bitmap, int left, int top, int type, String name) {
         DrawRecord dotRecord = new DrawRecord();
         dotRecord.bitmap = bitmap;
         dotRecord.type = type;
-        dotRecord.name = "test" + i++;
+        dotRecord.name = name;
         dotRecord.rectOrigin = new RectF(0, 0, dotRecord.bitmap.getWidth(), dotRecord.bitmap.getHeight());
-        dotRecord.matrix = new Matrix();
+        dotRecord.matrix = new Matrix(curBackgroundRecord.matrix);
         dotRecord.matrix.postTranslate(left, top);
+
         return dotRecord;
     }
 
@@ -898,13 +964,30 @@ public class SketchpadView2 extends View {
      * @param origin
      * @return
      */
-    private float[] getPhysicsPoints(float[] origin) {
+    public float[] getPhysicsPoints(float[] origin) {
         float[] result = new float[origin.length];
         Matrix imageMatrix = curBackgroundRecord.matrix;
         Matrix inverseMatrix = new Matrix();
         imageMatrix.invert(inverseMatrix);
         inverseMatrix.mapPoints(result, origin);
+        int[] test = new int[origin.length];
+//        for (int j = 0; j < result.length; j++) {
+//            test[j] = (int) result[j];
+//        }
         return result;
+    }
+
+    public int[] getPhysicsPoints2(float[] origin) {
+        float[] result = new float[origin.length];
+        Matrix imageMatrix = curBackgroundRecord.matrix;
+        Matrix inverseMatrix = new Matrix();
+        imageMatrix.invert(inverseMatrix);
+        inverseMatrix.mapPoints(result, origin);
+        int[] test = new int[origin.length];
+        for (int j = 0; j < result.length; j++) {
+            test[j] = (int) result[j];
+        }
+        return test;
     }
 
     //**********************************对外方法
@@ -956,6 +1039,7 @@ public class SketchpadView2 extends View {
 
     /**
      * 根据点位
+     *
      * @param bitmap
      * @param left
      * @param top
@@ -963,21 +1047,48 @@ public class SketchpadView2 extends View {
      * @param bottom
      * @param type
      */
-    public void addDrawRecordByPoint(Bitmap bitmap, int left, int top, int right, int bottom, int type) {
+    public void addDrawRecordByPoint(Bitmap bitmap, int left, int top, int right, int bottom, int type, float rotate, String name) {
         if (bitmap != null) {
-            Bitmap tempBitmap = DrawUtil.setBitmapWH(bitmap, (right - left), (bottom - left));
-            DrawRecord record = initDrawRecordByPoint(tempBitmap, left, top, right, bottom, type);
+            Bitmap tempBitmap = DrawUtil.setBitmapWH(bitmap, (right - left), (bottom - top));
+            if (left > right) {
+                int temp = right;
+                right = left;
+                left = temp;
+            }
+            if (top > bottom) {
+                int temp = bottom;
+                bottom = top;
+                top = temp;
+            }
+            DrawRecord record = initDrawRecordByPoint(tempBitmap, left, top, right, bottom, type, rotate, name);
             setDrawRecord(record);
+
+
+            record.matrix.reset();
+            record.matrix.postTranslate(-record.rectOrigin.centerX(), -record.rectOrigin.centerY());
+            record.matrix.postRotate(record.mRotation);
+            record.matrix.postTranslate(record.rectOrigin.centerX(), record.rectOrigin.centerY());
+
+            if (onDrawControlListener != null) {
+                float[] origin = DrawUtil.calculateRectCorners(record);
+                onDrawControlListener.onDrawConfirm(record, getPhysicsPoints(origin));
+                // TODO actionMode = ACTION_NONE;
+            }
         } else {
             Toast.makeText(context, "draw bitmap can not be null", Toast.LENGTH_SHORT).show();
         }
     }
 
-    public void addDotRecordByPoint(Bitmap bitmap, int left, int top, int right, int bottom, int type) {
+    public void addDotRecordByPoint(Bitmap bitmap, int left, int top, int right, int bottom, int type, String name) {
         if (bitmap != null) {
             Bitmap tempBitmap = DrawUtil.setBitmapWH(bitmap, (right - left), (bottom - top));
-            DrawRecord record = initDotRecordByPoint(tempBitmap, left, top, type);
+            DrawRecord record = initDotRecordByPoint(tempBitmap, left, top, type, name);
             setDrawRecord(record);
+            if (onDrawControlListener != null) {
+                float[] origin = DrawUtil.calculateRectCorners(record);
+                onDrawControlListener.onDrawConfirm(record, getPhysicsPoints(origin));
+                //TODO actionMode = ACTION_NONE;
+            }
         } else {
             Toast.makeText(context, "dot bitmap can not be null", Toast.LENGTH_SHORT).show();
         }

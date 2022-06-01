@@ -4,7 +4,11 @@ import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 
-
+/**
+ * @Author : fzy
+ * @Date : 2022/4/25
+ * @Description :
+ */
 public class DotRecord {
 
     public Bitmap bitmap;

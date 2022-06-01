@@ -1,16 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#F6F5FA">
+    android:layout_height="match_parent">
 
+    <!-- 标题 -->
+    <TextView
+        android:id="@+id/tv_title"
+        android:layout_width="wrap_content"
+        android:layout_height="30px"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="90px"
+        android:gravity="center"
+        android:text=""
+        android:textColor="#000000"
+        android:textSize="26px"
+        android:textStyle="bold" />
 
     <!-- 功能选择菜单 -->
     <LinearLayout
         android:id="@+id/ll_main_menu"
         android:layout_width="100px"
-        android:layout_height="400px"
+        android:layout_height="500px"
         android:layout_marginTop="170px"
         android:background="@drawable/shape_menu_right"
         android:gravity="center_horizontal"
@@ -64,6 +76,22 @@
             android:text="禁行区"
             android:textColor="@color/black"
             android:textSize="14px" />
+
+        <Button
+            android:id="@+id/bt_eraser"
+            android:layout_width="48px"
+            android:layout_height="48px"
+            android:layout_marginTop="40px"
+            android:background="@mipmap/icon_eraser_unpressed" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5px"
+            android:gravity="center"
+            android:text="橡皮擦"
+            android:textColor="@color/black"
+            android:textSize="14px" />
     </LinearLayout>
 
     <!-- 子按钮区域 -->
@@ -87,7 +115,7 @@
             android:layout_centerInParent="true"
             android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:visibility="visible">
+            android:visibility="gone">
 
             <Button
                 android:id="@+id/bt_add_waterdot"
@@ -113,17 +141,72 @@
                 app:strokeWidth="1px" />
         </LinearLayout>
 
+        <!-- 添加虚拟墙 -->
+        <LinearLayout
+            android:id="@+id/ll_line_menu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/bt_add_line"
+                style="@style/roundButton"
+                android:layout_width="match_parent"
+                android:layout_height="40px"
+                android:text="添加"
+                android:textColor="@color/black"
+                android:textSize="16px"
+                app:backgroundTint="@color/white"
+                app:strokeWidth="1px" />
+        </LinearLayout>
+
+        <!-- 添加禁行区 -->
+        <LinearLayout
+            android:id="@+id/ll_rect_menu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/bt_add_rect"
+                style="@style/roundButton"
+                android:layout_width="match_parent"
+                android:layout_height="40px"
+                android:text="添加"
+                android:textColor="@color/black"
+                android:textSize="16px"
+                app:backgroundTint="@color/white"
+                app:strokeWidth="1px" />
+        </LinearLayout>
     </RelativeLayout>
 
-
-    <!-- 画板 -->
-    <com.lavanidad.qiushui.map.SketchpadView2
-        android:id="@+id/sketchpadView"
+    <!-- 中心地图区域 -->
+    <com.lavanidad.qiushui.widget.ZoomLayout
+        android:id="@+id/zoom_map"
         android:layout_width="580px"
         android:layout_height="580px"
         android:layout_marginLeft="250px"
         android:layout_marginTop="160px"
-        android:visibility="visible" />
+        app:double_click_zoom="1.0"
+        app:layout_constraintStart_toEndOf="@id/ll_main_menu"
+        app:layout_constraintTop_toBottomOf="parent"
+        app:max_zoom="2.5"
+        app:min_zoom="1.0">
+
+        <!-- 画板 -->
+        <com.lavanidad.qiushui.map.SketchpadView2
+            android:id="@+id/sketchpadView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible" />
+
+    </com.lavanidad.qiushui.widget.ZoomLayout>
 
 
     <LinearLayout
@@ -198,4 +281,84 @@
             </LinearLayout>
         </RelativeLayout>
     </LinearLayout>
+
+    <!-- 橡皮擦操作区域 -->
+    <LinearLayout
+        android:id="@+id/ll_eraser_area"
+        android:layout_width="100px"
+        android:layout_height="500px"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="170px"
+        android:background="@drawable/shape_menu_left"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:translationZ="5dp"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/bt_eraser_select"
+            android:layout_width="48px"
+            android:layout_height="48px"
+            android:layout_marginTop="40px"
+            android:background="@mipmap/icon_move_unpressed" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5px"
+            android:gravity="center"
+            android:text="移动"
+            android:textColor="@color/black"
+            android:textSize="14px" />
+
+        <Button
+            android:id="@+id/bt_eraser_undo"
+            android:layout_width="48px"
+            android:layout_height="48px"
+            android:layout_marginTop="40px"
+            android:background="@mipmap/icon_redo" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5px"
+            android:gravity="center"
+            android:text="撤销"
+            android:textColor="@color/black"
+            android:textSize="14px" />
+
+        <Button
+            android:id="@+id/bt_eraser_clear"
+            android:layout_width="48px"
+            android:layout_height="48px"
+            android:layout_marginTop="40px"
+            android:background="@mipmap/icon_clear" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5px"
+            android:gravity="center"
+            android:text="重做"
+            android:textColor="@color/black"
+            android:textSize="14px" />
+
+        <Button
+            android:id="@+id/bt_eraser_save"
+            android:layout_width="48px"
+            android:layout_height="48px"
+            android:layout_marginTop="40px"
+            android:background="@mipmap/icon_save" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5px"
+            android:gravity="center"
+            android:text="保存"
+            android:textColor="@color/black"
+            android:textSize="14px" />
+
+    </LinearLayout>
+
 </RelativeLayout>

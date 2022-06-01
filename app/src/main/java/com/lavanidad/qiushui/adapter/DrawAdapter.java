@@ -20,7 +20,7 @@ public class DrawAdapter extends BaseQuickAdapter<DrawRecord, BaseViewHolder> {
     protected void convert(BaseViewHolder helper, DrawRecord item) {
         ((CheckBox) helper.getView(R.id.cb_check)).setChecked(item.isChecked);
 
-        helper.setText(R.id.tv_name, "" + item.name)
+        helper.setText(R.id.tv_name, item.name)
                 .addOnClickListener(R.id.cb_check);
 
     }

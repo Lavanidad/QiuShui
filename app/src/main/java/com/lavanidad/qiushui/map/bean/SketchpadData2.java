@@ -13,6 +13,7 @@ public class SketchpadData2 {
     public List<DrawRecord> selectedDrawRecord;
     public BackgroundRecord backgroundRecord;
     public int touchMode;
+    public int drawMode;
 
     public SketchpadData2() {
         drawRecordList = new ArrayList<>();

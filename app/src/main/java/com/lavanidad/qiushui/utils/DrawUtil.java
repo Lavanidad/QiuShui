@@ -15,7 +15,12 @@ import com.lavanidad.qiushui.map.bean.RectRecord;
 
 public class DrawUtil {
 
-
+    /**
+     * 计算矩形四个角点和中心点
+     *
+     * @param record
+     * @return
+     */
     public static float[] calculateCorners(RectRecord record) {
         float[] rectCornersSrc = new float[10];
         float[] rectCorners = new float[10];
@@ -39,31 +44,86 @@ public class DrawUtil {
         return rectCorners;
     }
 
-
-    public static float calculatePointDistance(float[] pt1, float[] pt2) {
-        return (float) Math.sqrt(Math.pow(pt1[0] - pt2[0], 2) + Math.pow(pt1[1] - pt2[1], 2));
+    public static float[] calculateRectOrigin(DrawRecord record) {
+        float[] rectCornersSrc = new float[4];
+        RectF rectF = record.rectOrigin;
+        rectCornersSrc[0] = rectF.left;
+        rectCornersSrc[1] = rectF.top;
+        rectCornersSrc[2] = rectF.right;
+        rectCornersSrc[3] = rectF.bottom;
+        return rectCornersSrc;
     }
 
-    public static double calculateAngleBetweenPoints(float[] pt1, float[] pt2) {
-        float dx = pt2[0] - pt1[0];
-        float dy = pt2[1] - pt1[1];
-        if (dx == 0 && dy == 0) {
-            return 0d;
-        }
-        double angle;
-        angle = Math.toDegrees(Math.atan2(dx, dy));
-        if (angle < 0) {
-            angle = 360d + angle % (-360d);
-        } else {
-            angle = angle % 360d;
-        }
-        return angle;
+    public static float[] calculateDotOrigin(DrawRecord record) {
+        float[] rectCornersSrc = new float[4];
+        //float[] rectCorners = new float[4];
+        RectF rectF = record.rectOrigin;
+        rectCornersSrc[0] = rectF.left;
+        rectCornersSrc[1] = rectF.top;
+        rectCornersSrc[2] = rectF.right;
+        rectCornersSrc[3] = rectF.bottom;
+        //record.matrix.mapPoints(rectCorners, rectCornersSrc);
+        //return rectCorners;
+        return rectCornersSrc;
     }
 
-    public static float getDistance(MotionEvent event) {
-        float x = event.getX(0) - event.getX(1);
-        float y = event.getY(0) - event.getY(1);
-        return (float) Math.sqrt(x * x + y * y);
+    /**
+     * TODO  废弃的方法 OLD
+     * @param record
+     * @return
+     */
+    public static float[] calculateRectResult(DrawRecord record) {
+        float[] rectCornersSrc = new float[8];
+        float[] rectCorners = new float[8];
+        RectF rectF = record.rectOrigin;
+        rectCornersSrc[0] = rectF.left;
+        rectCornersSrc[1] = rectF.top;
+        rectCornersSrc[2] = rectF.right;
+        rectCornersSrc[3] = rectF.top;
+        rectCornersSrc[4] = rectF.right;
+        rectCornersSrc[5] = rectF.bottom;
+        rectCornersSrc[6] = rectF.left;
+        rectCornersSrc[7] = rectF.bottom;
+        record.matrix.mapPoints(rectCorners, rectCornersSrc);
+        return rectCorners;
+    }
+
+//    public static float[] calculateRectResult(DrawRecord record) {
+//        float[] rectCornersSrc = new float[8];
+//        RectF rectF = record.rectOrigin;
+//        rectCornersSrc[0] = rectF.left;
+//        rectCornersSrc[1] = rectF.top;
+//        rectCornersSrc[2] = rectF.right;
+//        rectCornersSrc[3] = rectF.top;
+//        rectCornersSrc[4] = rectF.right;
+//        rectCornersSrc[5] = rectF.bottom;
+//        rectCornersSrc[6] = rectF.left;
+//        rectCornersSrc[7] = rectF.bottom;
+//        return rectCornersSrc;
+//    }
+
+    public static float[] calculateLineResult(DrawRecord record) {
+        float[] rectCornersSrc = new float[4];
+        float[] rectCorners = new float[4];
+        RectF rectF = record.rectOrigin;
+        rectCornersSrc[0] = rectF.left;
+        rectCornersSrc[1] = rectF.centerY();
+        rectCornersSrc[2] = rectF.right;
+        rectCornersSrc[3] = rectF.centerY();
+        record.matrix.mapPoints(rectCorners, rectCornersSrc);
+        return rectCorners;
+        //return rectCornersSrc;
+    }
+
+    public static float[] calculateDotResult(DrawRecord record) {
+        float[] rectCornersSrc = new float[2];
+        float[] rectCorners = new float[2];
+        RectF rectF = record.rectOrigin;
+        rectCornersSrc[0] = rectF.centerX();
+        rectCornersSrc[1] = rectF.bottom;
+        record.matrix.mapPoints(rectCorners, rectCornersSrc);
+        return rectCorners;
+        //return rectCornersSrc;
     }
 
     public static float[] calculateRectCorners(DrawRecord record) {
@@ -103,9 +163,10 @@ public class DrawUtil {
         rectCornersSrc[17] = rectF.centerY();
 
         record.matrix.mapPoints(rectCorners, rectCornersSrc);
+
+        // Log.e("draw", "left:" + rectF.left + ",top:" + rectF.top + ",right:" + rectF.right + "bottom" + rectF.bottom);
         return rectCorners;
     }
-
 
     public static float[] calculateBGCorners(BackgroundRecord record) {
         float[] bgCornersSrc = new float[10];//0,1代表左上角点XY，2,3代表右上角点XY，4,5代表右下角点XY，6,7代表左下角点XY，8,9代表中心点XY
@@ -161,6 +222,31 @@ public class DrawUtil {
         return lineCorners;
     }
 
+    /**
+     * 计算排水点需要用到的点位
+     *
+     * @param
+     * @return
+     */
+    public static float[] calculateDot(DotRecord dotRecord) {
+        float[] dotCornersSrc = new float[10];
+        float[] dotCorners = new float[10];
+        RectF rectF = dotRecord.rectOrigin;
+
+        dotCornersSrc[0] = rectF.left;
+        dotCornersSrc[1] = rectF.top;
+        dotCornersSrc[2] = rectF.right;
+        dotCornersSrc[3] = rectF.top;
+        dotCornersSrc[4] = rectF.right;
+        dotCornersSrc[5] = rectF.bottom;
+        dotCornersSrc[6] = rectF.left;
+        dotCornersSrc[7] = rectF.bottom;
+        dotCornersSrc[8] = rectF.centerX();
+        dotCornersSrc[9] = rectF.centerY();
+        dotRecord.matrix.mapPoints(dotCorners, dotCornersSrc);
+        return dotCorners;
+    }
+
 
     public static float[] calculateBackground(BackgroundRecord record) {
         float[] rectCornersSrc = new float[10];
@@ -185,32 +271,41 @@ public class DrawUtil {
         return rectCorners;
     }
 
-    public static float[] calculateDot(DotRecord dotRecord) {
-        float[] dotCornersSrc = new float[10];
-        float[] dotCorners = new float[10];
-        RectF rectF = dotRecord.rectOrigin;
 
-        dotCornersSrc[0] = rectF.left;
-        dotCornersSrc[1] = rectF.top;
-        dotCornersSrc[2] = rectF.right;
-        dotCornersSrc[3] = rectF.top;
-        dotCornersSrc[4] = rectF.right;
-        dotCornersSrc[5] = rectF.bottom;
-        dotCornersSrc[6] = rectF.left;
-        dotCornersSrc[7] = rectF.bottom;
-        dotCornersSrc[8] = rectF.centerX();
-        dotCornersSrc[9] = rectF.centerY();
-        dotRecord.matrix.mapPoints(dotCorners, dotCornersSrc);
-        return dotCorners;
+    public static float getDistance(MotionEvent event) {
+        float x = event.getX(0) - event.getX(1);
+        float y = event.getY(0) - event.getY(1);
+        return (float) Math.sqrt(x * x + y * y);
+    }
+
+    public static float calculatePointDistance(float[] pt1, float[] pt2) {
+        return (float) Math.sqrt(Math.pow(pt1[0] - pt2[0], 2) + Math.pow(pt1[1] - pt2[1], 2));
+    }
+
+    public static double calculateAngleBetweenPoints(float[] pt1, float[] pt2) {
+        float dx = pt2[0] - pt1[0];
+        float dy = pt2[1] - pt1[1];
+        if (dx == 0 && dy == 0) {
+            return 0d;
+        }
+        double angle;
+        angle = Math.toDegrees(Math.atan2(dx, dy));
+        if (angle < 0) {
+            angle = 360d + angle % (-360d);
+        } else {
+            angle = angle % 360d;
+        }
+        return angle;
     }
 
     public static Bitmap setBitmapWH(Bitmap bitmap, float newWidth, float newHeight) {
-        int width = bitmap.getWidth();
-        int height = bitmap.getHeight();
+        Bitmap bitmapTemp = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+        int width = bitmapTemp.getWidth();
+        int height = bitmapTemp.getHeight();
         float scaleWidth = (newWidth) / width;
         float scaleHeight = (newHeight) / height;
         Matrix matrix = new Matrix();
         matrix.postScale(scaleWidth, scaleHeight);
-        return Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, true);
+        return Bitmap.createBitmap(bitmapTemp, 0, 0, width, height, matrix, true);
     }
 }
